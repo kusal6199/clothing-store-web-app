@@ -74,6 +74,40 @@ class NewsletterTests(TestCase):
         self.assertEqual(NewsletterSubscriber.objects.count(), 0)
 
 
+class SearchMetadataTests(TestCase):
+    def test_canonical_robots_and_sitemap_use_configured_site_url(self):
+        from django.test import override_settings
+
+        with override_settings(SITE_URL="https://store.example"):
+            page = self.client.get(reverse("catalog") + "?q=tee")
+            self.assertContains(page, '<link rel="canonical" href="https://store.example/catalog/">')
+            self.assertContains(page, '<meta property="og:url" content="https://store.example/catalog/">')
+            self.assertContains(self.client.get(reverse("robots")), "Sitemap: https://store.example/sitemap.xml")
+            self.assertContains(self.client.get(reverse("sitemap")), "https://store.example/catalog/")
+
+    def test_product_schema_is_absolute_and_script_safe(self):
+        import json
+        import re
+        from django.test import override_settings
+
+        product = Product.objects.create(name="Tee </script><script>alert(1)</script>", slug="tee",
+                                         price=Decimal("1200.00"), images=["/static/catalog/products/tee.jpg"])
+        ProductVariant.objects.create(product=product, size="M", stock=2)
+        with override_settings(SITE_URL="https://store.example"):
+            response = self.client.get(reverse("product_detail", args=[product.slug]))
+        html = response.content.decode()
+        self.assertIn('href="https://store.example/products/tee/"', html)
+        self.assertNotIn("</script><script>", html)
+        payload = re.search(r'<script type="application/ld\+json">(.*?)</script>', html)
+        self.assertIsNotNone(payload)
+        schema = json.loads(payload.group(1))
+        self.assertEqual(schema["@type"], "Product")
+        self.assertEqual(schema["offers"]["price"], "1200.00")
+        self.assertEqual(schema["offers"]["priceCurrency"], "NPR")
+        self.assertEqual(schema["offers"]["availability"], "https://schema.org/InStock")
+        self.assertEqual(schema["image"], ["https://store.example/static/catalog/products/tee.jpg"])
+
+
 class CheckoutFlowTests(TestCase):
     def setUp(self):
         self.category = Category.objects.create(name="T-Shirts", slug="t-shirts")

@@ -4,8 +4,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="{{ site_settings.site_tagline|default:'Premium clothing and accessories' }}">
+  <meta name="description" content="{% firstof seo_description site_settings.site_tagline 'Premium clothing and accessories' %}">
   <title>{% block title %}{{ site_settings.site_name|default:'Clothing Shop' }}{% endblock %}</title>
+  <link rel="canonical" href="{{ canonical_url }}">
+  <meta property="og:type" content="{{ seo_type|default:'website' }}">
+  <meta property="og:site_name" content="{{ site_settings.site_name|default:'Clothing Shop' }}">
+  <meta property="og:title" content="{% firstof seo_title site_settings.site_name 'Clothing Shop' %}">
+  <meta property="og:description" content="{% firstof seo_description site_settings.site_tagline 'Premium clothing and accessories' %}">
+  <meta property="og:url" content="{{ canonical_url }}">
+  <meta property="og:image" content="{{ seo_image|default:default_og_image }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{% firstof seo_title site_settings.site_name 'Clothing Shop' %}">
+  <meta name="twitter:description" content="{% firstof seo_description site_settings.site_tagline 'Premium clothing and accessories' %}">
+  <meta name="twitter:image" content="{{ seo_image|default:default_og_image }}">
+  {% if seo_json_ld %}<script type="application/ld+json">{{ seo_json_ld }}</script>{% endif %}
   <link rel="icon" href="{% static 'branding/logo.jpg' %}">
   <link rel="stylesheet" href="{% static 'css/site.css' %}">
   <script src="{% static 'js/site.js' %}" defer></script>

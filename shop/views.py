@@ -13,6 +13,7 @@ from .models import (
     Product, ProductVariant, PromoBanner, Review, Tag, Visitor, LoyaltyProgress,
 )
 from .services import InsufficientStock, InvalidPromo, cart_rows, create_order, promo_for, store_settings
+from .seo import asset_url, json_ld, site_url
 
 
 def track(request):
@@ -27,7 +28,20 @@ def track(request):
 def home(request):
     track(request)
     sections = {section.key: section for section in HomepageSection.objects.all()}
+    settings = store_settings()
+    store_schema = {
+        "@context": "https://schema.org", "@type": "ClothingStore",
+        "name": settings.get("site_name", "Clothing Shop"),
+        "description": settings.get("site_tagline", "Premium clothing and accessories"),
+        "url": site_url("/"),
+        "telephone": settings.get("phone", ""),
+        "email": settings.get("email", ""),
+        "address": settings.get("address", ""),
+        "sameAs": [settings[key] for key in ("instagram", "facebook") if settings.get(key)],
+    }
     return render(request, "shop/home.html", {
+        "seo_title": settings.get("site_name", "Clothing Shop") + " — Premium Clothing Store",
+        "seo_json_ld": json_ld(store_schema),
         "hero_slides": HeroSlide.objects.filter(visible=True),
         "promo_banner": PromoBanner.objects.filter(visible=True).first(),
         "sections": sections,
@@ -84,6 +98,7 @@ def catalog(request):
     pagination_params = request.GET.copy()
     pagination_params.pop("page", None)
     return render(request, "shop/catalog.html", {
+        "seo_title": "Shop All — " + store_settings().get("site_name", "Clothing Shop"),
         "page": page, "categories": Category.objects.filter(visible=True),
         "collections": Collection.objects.filter(visible=True), "tags": Tag.objects.all(),
         "sizes": ProductVariant.objects.filter(stock__gt=0).values_list("size", flat=True).distinct().order_by("size"),
@@ -98,7 +113,24 @@ def product_detail(request, slug):
     track(request)
     product = get_object_or_404(Product.objects.select_related("category").prefetch_related("variants", "tags"), slug=slug, visibility=True)
     related = Product.objects.filter(visibility=True, category=product.category).exclude(pk=product.pk)[:4]
+    store_name = store_settings().get("site_name", "Clothing Shop")
+    product_schema = {
+        "@context": "https://schema.org", "@type": "Product",
+        "name": product.name, "description": product.description,
+        "sku": product.sku or product.id,
+        "image": [asset_url(image) for image in [*product.images, *product.gallery_images]],
+        "brand": {"@type": "Brand", "name": store_name},
+        "offers": {"@type": "Offer", "url": site_url(request.path),
+                   "price": str(product.current_price), "priceCurrency": "NPR",
+                   "availability": "https://schema.org/InStock" if product.in_stock else "https://schema.org/OutOfStock"},
+    }
+    if product.category:
+        product_schema["category"] = product.category.name
     return render(request, "shop/product.html", {"product": product, "related": related,
+        "seo_title": f"{product.name} — {store_name}",
+        "seo_description": product.description[:160] or f"Buy {product.name} at {store_name}.",
+        "seo_image": asset_url(product.primary_image), "seo_type": "product",
+        "seo_json_ld": json_ld(product_schema),
         "reviews": product.reviews.filter(approved=True).exclude(comment="")[:10]})
 
 
@@ -187,7 +219,8 @@ def contact(request):
         form.save()
         messages.success(request, "Thanks! Your message has been sent.")
         return redirect("contact")
-    return render(request, "shop/contact.html", {"form": form})
+    return render(request, "shop/contact.html", {"form": form,
+        "seo_title": "Contact Us — " + store_settings().get("site_name", "Clothing Shop")})
 
 
 @require_POST
@@ -267,14 +300,14 @@ def dashboard(request):
 
 
 def robots(request):
-    return HttpResponse("User-agent: *\nDisallow: /admin/\nDisallow: /dashboard/\n", content_type="text/plain")
+    rules = "User-agent: *\nDisallow: /admin/\nDisallow: /dashboard/\nDisallow: /checkout/\n"
+    return HttpResponse(rules + "Sitemap: " + site_url("/sitemap.xml") + "\n", content_type="text/plain")
 
 
 def sitemap(request):
     from django.urls import reverse
     from django.utils.html import escape
-    base = request.build_absolute_uri("/").rstrip("/")
     paths = [reverse("home"), reverse("catalog"), reverse("contact")]
     paths.extend(reverse("product_detail", args=[slug]) for slug in Product.objects.filter(visibility=True).values_list("slug", flat=True))
-    urls = "".join(f"<url><loc>{escape(base + path)}</loc></url>" for path in paths)
+    urls = "".join(f"<url><loc>{escape(site_url(path))}</loc></url>" for path in paths)
     return HttpResponse(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>', content_type="application/xml")

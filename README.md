@@ -34,6 +34,8 @@ Open `http://127.0.0.1:8000/` for the shop and `http://127.0.0.1:8000/admin/` fo
 
 The fixture contains only public catalog and homepage content. Its images live in `static/catalog/`, so no local media folder or source database access is needed for a fresh clone. Run `loaddata` on a new database; it should not be used as a production data migration. Admin uploads and any new operational data remain local to your own database and `media/` folder. The optional `scripts/export_public_fixture.py` refreshes this fixture from the isolated Django development database, with an explicit model and settings allowlist.
 
+Set `SITE_URL` to the public Django origin when deploying. Canonical links, Open Graph images, structured data, `robots.txt`, and `sitemap.xml` use it. The default is `http://127.0.0.1:8000` for local work.
+
 For a quick check:
 
 ```bash
