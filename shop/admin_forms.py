@@ -11,6 +11,13 @@ class ProductAdminForm(forms.ModelForm):
         model = Product
         fields = "__all__"
 
+    def clean(self):
+        data = super().clean()
+        for field in ("images", "gallery_images", "colors"):
+            if field in data and data[field] is None:
+                data[field] = []
+        return data
+
 
 class CategoryAdminForm(forms.ModelForm):
     image_upload = forms.ImageField(required=False, help_text="Optional. Upload a category image.")

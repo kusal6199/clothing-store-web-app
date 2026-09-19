@@ -28,10 +28,10 @@ class ProductAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         uploaded = form.cleaned_data.get("image_upload")
         if uploaded:
-            obj.images = [*obj.images, save_image(uploaded, "products")]
+            obj.images = [*(obj.images or []), save_image(uploaded, "products")]
         gallery_upload = form.cleaned_data.get("gallery_upload")
         if gallery_upload:
-            obj.gallery_images = [*obj.gallery_images, save_image(gallery_upload, "products")]
+            obj.gallery_images = [*(obj.gallery_images or []), save_image(gallery_upload, "products")]
         super().save_model(request, obj, form, change)
 
     list_display = ("name", "category", "price", "discount_price", "featured", "visibility", "updated_at")

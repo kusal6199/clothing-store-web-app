@@ -44,6 +44,7 @@ The original is a Next.js/React/TypeScript storefront and custom admin. Its curr
 - Promo discounts are bounded to 0–100% in admin/model validation and checked again during checkout, so malformed direct database values cannot create a negative order total. The paid-order action now rejects cancelled or refunded orders before inventory or loyalty changes. Migration `0004` adds the validators. Nineteen Django tests pass.
 - An external HTML formatter rewrote `home.html` and `dashboard.html` during this milestone and split Django template tags; their render tests failed. The last working committed versions were restored after saving copies in `/private/tmp`, and the full suite passed again. `.prettierignore` now excludes Django templates from Prettier formatting.
 - Unpaid test orders can now be cancelled through a dedicated Django admin action. It releases promo usage and pending loyalty reservations exactly once; paid/refunded orders are rejected. Directly changing an order to cancelled in the admin form is disallowed so staff use the accounting action. A test covers idempotency, promo reuse, reward reservation release, and paid-order rejection. Twenty Django tests pass.
+- Product admin POSTs with blank `images`, `gallery_images`, or `colors` JSON fields now save empty lists; image uploads also append safely if an older record contains null image lists. A full admin POST test creates a product with main/gallery uploads and a variant. `manage.py check` and all 21 Django tests pass. The local development database has an admin account; its credentials and database are not tracked.
 - Django test client rendered the homepage, catalog, product, cart, checkout, contact, sitemap, admin login, and loyalty lookup successfully.
 - Browser visual QA could not be performed because no browser surface was available in that session. The visual design still needs comparison against the original site.
 - The original `Jersey-main` Git working tree was clean after creating this separate project.
@@ -53,7 +54,7 @@ The source-derived feature checklist and current status live in `REQUIREMENTS.md
 ## Next work
 
 1. Run the two sites side by side and compare every public page and admin workflow for functionality and appearance. Improve the Django templates/CSS where needed.
-2. Create a Django superuser locally with `.venv/bin/python manage.py createsuperuser` when admin access is needed; no default credentials were imported.
+2. Create a Django superuser on each new environment with `.venv/bin/python manage.py createsuperuser` when admin access is needed; no default credentials are shipped.
 3. Keep order/payment handling in test scope unless the user changes priorities. Do not enable live eSewa from the original's test integration.
 4. When the user provides a **new** Supabase project, configure its database and Storage separately, migrate the Django schema there, and import public data with `scripts/import_public_catalog.py`. Do not run Django migrations on the original Prisma database.
 5. Before launch, plan fresh operational-data migration, persistent media URLs, production hosting/HTTPS settings, and end-to-end browser QA.
