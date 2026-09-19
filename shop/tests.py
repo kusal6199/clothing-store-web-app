@@ -324,6 +324,46 @@ class CheckoutFlowTests(TestCase):
         self.assertEqual(progress.purchase_count, 11)
         self.assertEqual(progress.free_items_redeemed, 1)
 
+    def test_unpaid_cancellation_releases_promo_and_reward_reservation_once(self):
+        from .services import cancel_pending_order, InvalidOrderTransition
+        from .admin_forms import OrderAdminForm
+
+        promo = PromoCode.objects.create(code="ONCE", influencer_name="Test", discount_percent=Decimal("10.00"), max_uses=1)
+        LoyaltyProgress.objects.create(phone="9800000000", category=self.category, purchase_count=10)
+        self.client.post(reverse("cart_add"), {"variant_id": self.variant.id, "quantity": 1})
+        response = self.client.post(reverse("checkout"), {
+            "customer_name": "Test Customer", "phone": "9800000000", "delivery_address": "Test address",
+            "delivery_zone": "inside", "promo_code": "ONCE", "reward_variant_id": self.variant.id,
+        })
+        self.assertEqual(response.status_code, 302)
+        order = Order.objects.get()
+        promo.refresh_from_db()
+        self.assertEqual(promo.current_uses, 1)
+        direct_edit = OrderAdminForm(instance=order, data={"order_status": "cancelled"})
+        self.assertIn("order_status", direct_edit.errors)
+        cancel_pending_order(order.pk)
+        cancel_pending_order(order.pk)
+        order.refresh_from_db()
+        promo.refresh_from_db()
+        self.variant.refresh_from_db()
+        self.assertEqual(order.order_status, "cancelled")
+        self.assertEqual(promo.current_uses, 0)
+        self.assertEqual(self.variant.stock, 5)
+        self.assertFalse(Order.objects.filter(phone="9800000000", reward_category=self.category,
+                                              payment_status="pending").exclude(order_status="cancelled").exists())
+        self.client.post(reverse("cart_add"), {"variant_id": self.variant.id, "quantity": 1})
+        reused = self.client.post(reverse("checkout"), {
+            "customer_name": "Test Customer", "phone": "9800000000", "delivery_address": "Test address",
+            "delivery_zone": "inside", "promo_code": "ONCE",
+        })
+        self.assertEqual(reused.status_code, 302)
+        new_order = Order.objects.exclude(pk=order.pk).get()
+        confirm_order_paid(new_order.pk)
+        with self.assertRaises(InvalidOrderTransition):
+            cancel_pending_order(new_order.pk)
+        promo.refresh_from_db()
+        self.assertEqual(promo.current_uses, 1)
+
 
 class ReviewEmailTests(TestCase):
     def test_paid_order_receives_one_review_link(self):

@@ -164,3 +164,18 @@ def confirm_order_paid(order_id):
             order.order_status = "confirmed"
         order.save(update_fields=["payment_status", "order_status", "reward_fulfilled", "updated_at"])
         return order
+
+
+def cancel_pending_order(order_id):
+    """Cancel an unpaid test order and release its promo/reward reservation."""
+    with transaction.atomic():
+        order = Order.objects.select_for_update().get(pk=order_id)
+        if order.order_status == "cancelled":
+            return order
+        if order.payment_status in {"paid", "refunded"}:
+            raise InvalidOrderTransition("Paid or refunded orders require a separate refund workflow.")
+        if order.promo_code_id:
+            PromoCode.objects.filter(pk=order.promo_code_id, current_uses__gt=0).update(current_uses=F("current_uses") - 1)
+        order.order_status = "cancelled"
+        order.save(update_fields=["order_status", "updated_at"])
+        return order

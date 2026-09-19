@@ -12,6 +12,8 @@ A separate Django rebuild of the clothing store in `Jersey-main`. It runs alongs
 
 Payments are intentionally a test/manual workflow. Placing an order does not collect or verify payment, and it does not automatically mark the order paid.
 
+For test orders, staff can use Django admin actions to mark an order paid or cancel an unpaid order. Cancelling an unpaid order releases its promo use and any pending loyalty reward reservation. Paid or refunded orders cannot be cancelled through that action; refunds still require a separate workflow.
+
 The newsletter form stores email addresses in the local database and lets staff manage them in Django admin. It does not send marketing emails. Subscriber data is excluded from the public fixture and Git repository.
 
 ## Run locally

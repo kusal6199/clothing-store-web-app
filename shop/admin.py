@@ -3,7 +3,7 @@ from django.db import transaction
 from django.db.models import F
 import csv
 from django.http import HttpResponse
-from .admin_forms import ProductAdminForm, CategoryAdminForm, HeroSlideAdminForm
+from .admin_forms import ProductAdminForm, CategoryAdminForm, HeroSlideAdminForm, OrderAdminForm
 from .storage import save_image
 from .models import (
     Category, Collection, HeroSlide, HomepageSection, LoyaltyProgress,
@@ -105,14 +105,31 @@ def export_orders(modeladmin, request, queryset):
     return response
 
 
+@admin.action(description="Cancel selected unpaid orders and release promo uses")
+def cancel_unpaid(modeladmin, request, queryset):
+    from .services import cancel_pending_order, InvalidOrderTransition
+    success = 0
+    for order in queryset:
+        try:
+            already_cancelled = order.order_status == "cancelled"
+            cancel_pending_order(order.pk)
+            if not already_cancelled:
+                success += 1
+        except InvalidOrderTransition as exc:
+            modeladmin.message_user(request, f"{order.order_number}: {exc}", level=messages.ERROR)
+    if success:
+        modeladmin.message_user(request, f"Cancelled {success} order(s).", level=messages.SUCCESS)
+
+
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
+    form = OrderAdminForm
     list_display = ("order_number", "customer_name", "phone", "total", "payment_status", "order_status", "created_at")
     list_filter = ("payment_status", "order_status", "created_at")
     search_fields = ("order_number", "customer_name", "phone")
     readonly_fields = ("order_number", "subtotal", "discount_amount", "delivery_charge", "total", "payment_status", "reward_fulfilled", "created_at", "updated_at")
     inlines = [OrderItemInline]
-    actions = [mark_paid, export_orders]
+    actions = [mark_paid, cancel_unpaid, export_orders]
 
 
 @admin.register(PromoCode)

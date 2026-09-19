@@ -1,6 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import Category, HeroSlide, Product
+from .models import Category, HeroSlide, Order, Product
 
 
 class ProductAdminForm(forms.ModelForm):
@@ -33,3 +33,15 @@ class HeroSlideAdminForm(forms.ModelForm):
         if not data.get("image") and not data.get("image_upload"):
             raise ValidationError("Provide an image URL or upload a new image.")
         return data
+
+
+class OrderAdminForm(forms.ModelForm):
+    class Meta:
+        model = Order
+        fields = "__all__"
+
+    def clean_order_status(self):
+        status = self.cleaned_data["order_status"]
+        if self.instance.pk and status == "cancelled" and self.instance.order_status != "cancelled":
+            raise ValidationError("Use the Cancel selected unpaid orders action to release reservations.")
+        return status
