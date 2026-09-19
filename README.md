@@ -5,7 +5,7 @@ A separate Django rebuild of the clothing store in `Jersey-main`. It runs alongs
 ## What works
 
 - Storefront: homepage sections, categories, collections, tags, product search and filters, product details, image gallery, cart, checkout, contact, newsletter signup, reviews, sitemap, and robots.txt.
-- Store management: Django admin for catalog, variants, homepage, reviews, messages, newsletter subscribers, settings, promo codes, orders, and inventory; a custom overview at `/dashboard/`.
+- Store management: Django admin for catalog, variants, homepage, reviews, messages, newsletter subscribers, settings, promo codes, orders, and inventory; a custom overview at `/dashboard/` and grouped settings at `/dashboard/settings/`.
 - Checkout: server-side prices, delivery charges, promo discounts, stock checks, pending orders, optional earned loyalty item, and an idempotent admin action to mark an order paid and deduct stock.
 - Media: local images for development. New admin uploads can go to a public Supabase Storage bucket when configured.
 - Scheduled review email command with SMTP configuration.

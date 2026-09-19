@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncDate
 from django.http import Http404, HttpResponse, HttpResponseBadRequest, JsonResponse
@@ -10,10 +11,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-from .forms import CheckoutForm, ContactForm, NewsletterForm, ReviewForm
+from .forms import CheckoutForm, ContactForm, NewsletterForm, ReviewForm, STORE_SETTING_GROUPS, StoreSettingsForm
 from .models import (
     Category, Collection, HeroSlide, HomepageSection, Message, NewsletterSubscriber, Order, OrderItem,
-    Product, ProductVariant, PromoBanner, Review, Tag, Visitor, LoyaltyProgress,
+    Product, ProductVariant, PromoBanner, Review, Setting, Tag, Visitor, LoyaltyProgress,
 )
 from .services import InsufficientStock, InvalidPromo, cart_rows, create_order, promo_for, store_settings
 from .seo import asset_url, json_ld, site_url
@@ -324,6 +325,19 @@ def dashboard(request):
     return render(request, "shop/dashboard.html", {"stats": stats,
         "orders_by_day": orders_by_day, "top_products": top_products,
         "recent_orders": Order.objects.all()[:10], "recent_messages": Message.objects.all()[:5]})
+
+
+@staff_member_required
+def dashboard_settings(request):
+    form = StoreSettingsForm(request.POST if request.method == "POST" else None, initial=store_settings())
+    if request.method == "POST" and form.is_valid():
+        with transaction.atomic():
+            for key, value in form.cleaned_data.items():
+                Setting.objects.update_or_create(key=key, defaults={"value": str(value if value is not None else "")})
+        messages.success(request, "Store settings saved.")
+        return redirect("dashboard_settings")
+    groups = [{"title": title, "fields": [form[key] for key in keys]} for title, keys in STORE_SETTING_GROUPS]
+    return render(request, "shop/dashboard_settings.html", {"form": form, "groups": groups})
 
 
 def robots(request):

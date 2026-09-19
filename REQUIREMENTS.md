@@ -21,7 +21,7 @@ Updated: 2026-09-19. This is a **source-derived working checklist**, not a forma
 
 | Requirement from current project | Django status | What remains |
 |---|---|---|
-| Dynamic homepage: hero slides, promo banner, new arrivals, categories, collections, featured products, best sellers, why-us, reviews, social, contact | Partial | Sections render from imported content, but exact design, section ordering controls, and all small interactions need comparison. |
+| Dynamic homepage: hero slides, promo banner, new arrivals, categories, collections, featured products, best sellers, why-us, reviews, social, contact | Partial | Sections render from imported content; exact design and small interactions need comparison. The source uses a fixed section order. |
 | Responsive navigation and footer | Partial | Implemented in templates/CSS; perform desktop and mobile visual QA. |
 | Catalog search and filters for category, collection, tag, size, colour, price, in-stock, flags, and sorting | Implemented | Query parameters now survive pagination, merchandising flags survive filter form submits, and size/colour match one stocked variant. Continue visual and source edge-case comparison. |
 | Product page with images, size/colour variants, price, stock, material/care text, reviews, related products | Partial | Variant selection now updates displayed price and stock; hover zoom is present. Browser interaction and design comparison remain. |
@@ -42,12 +42,12 @@ Updated: 2026-09-19. This is a **source-derived working checklist**, not a forma
 | Overview counts: products, orders, paid revenue, messages, visitors, customers | Partial | `/dashboard/` now has counts, a 14-day order chart with daily paid revenue, top products from paid orders, and linked recent orders; visual/admin workflow comparison remains. |
 | Product, variant stock, category, collection, tag CRUD | Implemented | Managed through Django admin; compare validation and ease of use with original custom UI. |
 | Image upload for products, categories, hero slides | Partial | Admin upload fields work with local media or configured Supabase Storage. Multi-image workflow and production media migration need QA. |
-| Homepage content, visibility, titles, hero and promo management | Partial | Models are editable in Django admin; reorder behavior and custom preview/editor UX are pending. |
+| Homepage content, visibility, titles, hero and promo management | Partial | Models are editable in Django admin; image preview/editor convenience still needs comparison. The source has no section reorder control. |
 | Orders: list/search/filter/detail/status, mark paid, stock/loyalty transition, CSV export | Partial | Django admin covers these; compare cancellation/refund rules, status workflow, and original custom UI. Payments remain test-only. |
 | Promo codes: validation, limits, percentage discount, attribution | Partial | Code validation, usage limit, and admin CRUD exist. Influencer commission reports are pending. |
 | Loyalty progress and free item redemption | Partial | Core count/redemption works with paid confirmation; compare all original reward/reservation/fulfilment edge cases. |
 | Reviews and contact messages moderation | Implemented | Available through Django admin; compare convenience actions with original. |
-| Settings: delivery, QR, contact, social, branding, footer | Partial | Key/value settings are editable in Django admin; a friendly grouped settings screen is pending. |
+| Settings: delivery, QR, contact, social, branding, footer | Implemented | Staff can edit grouped settings at `/dashboard/settings/`; delivery charges and contact URLs are validated. Compare convenience and presentation with the source. |
 | Visitor tracking and analytics | Partial | Visitor count and records exist; charts/reporting and privacy review are pending. |
 
 ## Data, infrastructure, and verification
@@ -59,7 +59,7 @@ Updated: 2026-09-19. This is a **source-derived working checklist**, not a forma
 | Separate Supabase PostgreSQL database | Pending | User must create/provide a new project and connection string; then run Django migrations and public import. |
 | Supabase Storage | Partial | Server-side upload code exists; new bucket and server-only key are not configured. Existing local media need migration for remote deployment. |
 | Existing operational data migration | Pending | Fresh source export and mapping at cutover; dummy/test order records were intentionally excluded from local DB. |
-| Development tests and route rendering | Partial | `manage.py check` and 14 tests pass, including fixture loading, catalog filters, newsletter signup, SEO metadata, variant prices, checkout totals, and staff dashboard analytics; test more admin, media, and error flows as parity work continues. |
+| Development tests and route rendering | Partial | `manage.py check` and 15 tests pass, including fixture loading, catalog filters, newsletter signup, SEO metadata, variant prices, checkout totals, staff dashboard analytics, and grouped settings; test more admin, media, and error flows as parity work continues. |
 | Browser visual comparison | Pending | No browser surface was available in this session either; compare desktop/mobile views and interactions against Next.js when one is available. |
 | Production deployment and domain switch | Pending | Configure Django host, HTTPS, persistent assets, background scheduling, backups, and monitoring after client approval. |
 | Live eSewa/payment launch | Deferred | User said payments are tests and not live yet. |

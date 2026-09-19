@@ -157,6 +157,32 @@ class DashboardAnalyticsTests(TestCase):
         self.assertContains(response, "View daily figures")
 
 
+class StoreSettingsTests(TestCase):
+    def test_only_staff_can_edit_grouped_settings_with_valid_delivery_charges(self):
+        from django.contrib.auth import get_user_model
+
+        url = reverse("dashboard_settings")
+        self.assertEqual(self.client.get(url).status_code, 302)
+        staff = get_user_model().objects.create_user(username="settings-staff", password="test-password", is_staff=True)
+        self.client.force_login(staff)
+        self.assertContains(self.client.get(url), "Test payment instructions")
+        values = {"site_name": "Example Store", "currency": "Rs", "delivery_inside_valley": "-1",
+                  "delivery_outside_valley": "250", "email": "store@example.com"}
+        invalid = self.client.post(url, values)
+        self.assertEqual(invalid.status_code, 200)
+        self.assertIn("delivery_inside_valley", invalid.context["form"].errors)
+        self.assertFalse(Setting.objects.filter(key="site_name").exists())
+        values["delivery_inside_valley"] = "125"
+        self.assertEqual(self.client.post(url, values).status_code, 302)
+        self.assertEqual(Setting.objects.get(key="site_name").value, "Example Store")
+        self.assertEqual(Setting.objects.get(key="delivery_inside_valley").value, "125")
+        self.assertEqual(Setting.objects.get(key="email").value, "store@example.com")
+        product = Product.objects.create(name="Tee", slug="tee", price=Decimal("500.00"))
+        variant = ProductVariant.objects.create(product=product, size="M", stock=1)
+        self.client.post(reverse("cart_add"), {"variant_id": variant.pk, "quantity": 1})
+        self.assertContains(self.client.get(reverse("checkout")), 'data-inside-charge="125"')
+
+
 class CheckoutFlowTests(TestCase):
     def setUp(self):
         self.category = Category.objects.create(name="T-Shirts", slug="t-shirts")

@@ -4,7 +4,7 @@
 <div class="container page-content dashboard">
   <div class="dashboard-heading">
     <div><p class="eyebrow">Store management</p><h1>Overview</h1></div>
-    <a class="button" href="{% url 'admin:index' %}">Open admin →</a>
+    <div class="dashboard-actions"><a href="{% url 'dashboard_settings' %}">Store settings</a><a class="button" href="{% url 'admin:index' %}">Open admin →</a></div>
   </div>
   <div class="stat-grid">
     <div><span>Products</span><strong>{{ stats.products }}</strong></div>

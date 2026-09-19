@@ -22,6 +22,34 @@ class NewsletterForm(forms.Form):
         return self.cleaned_data["email"].strip().lower()
 
 
+STORE_SETTING_GROUPS = (
+    ("Brand and footer", ("site_name", "site_tagline", "currency", "footer_about", "footer_copyright")),
+    ("Contact and social", ("phone", "email", "address", "instagram", "facebook")),
+    ("Delivery", ("delivery_inside_valley", "delivery_outside_valley")),
+    ("Test payment instructions", ("payment_instructions", "qr_image")),
+    ("Newsletter", ("newsletter_title", "newsletter_subtitle")),
+)
+
+
+class StoreSettingsForm(forms.Form):
+    site_name = forms.CharField(max_length=160, initial="Clothing Shop")
+    site_tagline = forms.CharField(max_length=300, required=False)
+    currency = forms.CharField(max_length=12, initial="Rs")
+    footer_about = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}))
+    footer_copyright = forms.CharField(max_length=300, required=False)
+    phone = forms.CharField(max_length=40, required=False)
+    email = forms.EmailField(required=False)
+    address = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}))
+    instagram = forms.URLField(required=False)
+    facebook = forms.URLField(required=False)
+    delivery_inside_valley = forms.DecimalField(max_digits=10, decimal_places=2, min_value=0, initial=100)
+    delivery_outside_valley = forms.DecimalField(max_digits=10, decimal_places=2, min_value=0, initial=200)
+    payment_instructions = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}))
+    qr_image = forms.CharField(max_length=500, required=False, label="Payment QR image URL")
+    newsletter_title = forms.CharField(max_length=160, required=False)
+    newsletter_subtitle = forms.CharField(max_length=300, required=False)
+
+
 class CheckoutForm(forms.Form):
     customer_name = forms.CharField(max_length=160, label="Full name")
     phone = forms.CharField(max_length=40)
