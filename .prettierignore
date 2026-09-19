@@ -1,0 +1,2 @@
+# Prettier's HTML parser can split Django template tags and break rendering.
+templates/**/*.html

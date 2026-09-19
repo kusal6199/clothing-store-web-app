@@ -136,8 +136,10 @@ class PromoCode(Timestamped):
     id = models.CharField(primary_key=True, max_length=32, default=new_id, editable=False)
     code = models.CharField(max_length=80, unique=True)
     influencer_name = models.CharField(max_length=160)
-    discount_percent = models.DecimalField(max_digits=5, decimal_places=2)
-    commission_percent = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"))
+    discount_percent = models.DecimalField(max_digits=5, decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01")), MaxValueValidator(Decimal("100.00"))])
+    commission_percent = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"),
+        validators=[MinValueValidator(Decimal("0.00")), MaxValueValidator(Decimal("100.00"))])
     max_uses = models.PositiveIntegerField(null=True, blank=True)
     current_uses = models.PositiveIntegerField(default=0)
     expires_at = models.DateTimeField(null=True, blank=True)

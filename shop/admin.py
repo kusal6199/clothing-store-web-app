@@ -81,13 +81,13 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.action(description="Mark selected orders paid and update stock")
 def mark_paid(modeladmin, request, queryset):
-    from .services import confirm_order_paid, InsufficientStock
+    from .services import confirm_order_paid, InsufficientStock, InvalidOrderTransition
     success = 0
     for order in queryset:
         try:
             confirm_order_paid(order.pk)
             success += 1
-        except InsufficientStock as exc:
+        except (InsufficientStock, InvalidOrderTransition) as exc:
             modeladmin.message_user(request, f"{order.order_number}: {exc}", level=messages.ERROR)
     if success:
         modeladmin.message_user(request, f"Confirmed {success} order(s).", level=messages.SUCCESS)

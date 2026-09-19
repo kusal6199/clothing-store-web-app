@@ -18,6 +18,10 @@ class InvalidPromo(Exception):
     pass
 
 
+class InvalidOrderTransition(Exception):
+    pass
+
+
 def money(value):
     return Decimal(str(value)).quantize(MONEY, rounding=ROUND_HALF_UP)
 
@@ -56,6 +60,8 @@ def promo_for(code, subtotal, lock=False):
         raise InvalidPromo("This promo code is unavailable.")
     if promo.max_uses is not None and promo.current_uses >= promo.max_uses:
         raise InvalidPromo("This promo code has reached its usage limit.")
+    if not Decimal("0") < promo.discount_percent <= Decimal("100"):
+        raise InvalidPromo("This promo code has an invalid discount.")
     return promo, money(subtotal * promo.discount_percent / Decimal("100"))
 
 
@@ -125,6 +131,8 @@ def confirm_order_paid(order_id):
     """Idempotently mark a test/manual payment paid, deduct stock, and count loyalty."""
     with transaction.atomic():
         order = Order.objects.select_for_update().get(pk=order_id)
+        if order.order_status == "cancelled" or order.payment_status == "refunded":
+            raise InvalidOrderTransition("Cancelled or refunded orders cannot be marked paid.")
         if order.payment_status == "paid":
             return order
         items = list(order.items.select_related("product", "product__category"))

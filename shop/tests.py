@@ -215,6 +215,42 @@ class AdminMediaTests(TestCase):
                 self.assertTrue((Path(directory) / url.removeprefix("/uploads/")).is_file())
 
 
+class PromoAndOrderGuardTests(TestCase):
+    def test_invalid_promo_percent_cannot_create_negative_total(self):
+        from django.core.exceptions import ValidationError
+
+        promo = PromoCode.objects.create(code="TOO-MUCH", influencer_name="Test", discount_percent=Decimal("150.00"))
+        with self.assertRaises(ValidationError):
+            promo.full_clean()
+        product = Product.objects.create(name="Tee", slug="promo-tee", price=Decimal("100.00"))
+        variant = ProductVariant.objects.create(product=product, size="M", stock=1)
+        self.client.post(reverse("cart_add"), {"variant_id": variant.pk, "quantity": 1})
+        self.assertEqual(self.client.post(reverse("promo_validate"), {"code": promo.code}).status_code, 400)
+        checkout = self.client.post(reverse("checkout"), {
+            "customer_name": "Test", "phone": "9800000000", "delivery_address": "Address",
+            "delivery_zone": "inside", "promo_code": promo.code,
+        })
+        self.assertEqual(checkout.status_code, 200)
+        self.assertContains(checkout, "invalid discount")
+        self.assertEqual(Order.objects.count(), 0)
+
+    def test_cancelled_order_cannot_be_marked_paid_or_deduct_stock(self):
+        from .services import InvalidOrderTransition
+
+        product = Product.objects.create(name="Tee", slug="cancelled-tee", price=Decimal("100.00"))
+        variant = ProductVariant.objects.create(product=product, size="M", stock=3)
+        order = Order.objects.create(order_number="CANCELLED-TEST", customer_name="Test", phone="9800000000",
+                                     delivery_address="Address", order_status="cancelled", total=Decimal("100.00"))
+        OrderItem.objects.create(order=order, product=product, product_name=product.name, size="M",
+                                 price=Decimal("100.00"), quantity=1)
+        with self.assertRaises(InvalidOrderTransition):
+            confirm_order_paid(order.pk)
+        variant.refresh_from_db()
+        order.refresh_from_db()
+        self.assertEqual(variant.stock, 3)
+        self.assertEqual(order.payment_status, "pending")
+
+
 class CheckoutFlowTests(TestCase):
     def setUp(self):
         self.category = Category.objects.create(name="T-Shirts", slug="t-shirts")
