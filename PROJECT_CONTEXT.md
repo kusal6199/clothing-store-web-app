@@ -31,6 +31,7 @@ The original is a Next.js/React/TypeScript storefront and custom admin. Its curr
 - `manage.py check` passed in the Desktop copy.
 - Four Django tests passed for checkout, promo pricing, loyalty accounting, and review email deduplication.
 - A fifth test now loads the public fixture into a fresh test database and checks that the storefront and packaged images render. All five tests pass.
+- Catalog filter work after the first push: pagination now preserves active search and filter parameters; applying sidebar filters retains a homepage merchandising filter; size and colour must match the same stocked variant. Two focused tests cover these cases, bringing the suite to seven passing tests.
 - Django test client rendered the homepage, catalog, product, cart, checkout, contact, sitemap, admin login, and loyalty lookup successfully.
 - Browser visual QA could not be performed because no browser surface was available in that session. The visual design still needs comparison against the original site.
 - The original `Jersey-main` Git working tree was clean after creating this separate project.
@@ -60,3 +61,5 @@ The original site can run on port 3000; Django runs on port 8000. See `README.md
 ## GitHub review workflow
 
 The remote at `https://github.com/kusal6199/clothing-store-web-app.git` was inspected on 2026-09-19 and was empty. Git was initialized locally; `main` contains only the empty root commit `f653940` and has been pushed to `origin/main`. The Django application belongs on `test`, which should branch from that root. After each verified milestone, update this handoff and `REQUIREMENTS.md`, commit, and push `origin/test`. The user reviews and manually merges into `main`. Never force-push or put application changes directly on `main`. Verify ignored files and do not publish credentials, the local SQLite database, customer records, or other private data.
+
+The initial Django baseline was committed and pushed on `test` as `25a8b32`. The catalog filter milestone follows it on the same branch; use `git log -1` for its commit hash after publication.

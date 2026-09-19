@@ -23,7 +23,7 @@ Updated: 2026-09-19. This is a **source-derived working checklist**, not a forma
 |---|---|---|
 | Dynamic homepage: hero slides, promo banner, new arrivals, categories, collections, featured products, best sellers, why-us, reviews, social, contact | Partial | Sections render from imported content, but exact design, section ordering controls, and all small interactions need comparison. |
 | Responsive navigation and footer | Partial | Implemented in templates/CSS; perform desktop and mobile visual QA. |
-| Catalog search and filters for category, collection, tag, size, colour, price, in-stock, flags, and sorting | Implemented | Verify against source edge cases and preserve query parameters during pagination. |
+| Catalog search and filters for category, collection, tag, size, colour, price, in-stock, flags, and sorting | Implemented | Query parameters now survive pagination, merchandising flags survive filter form submits, and size/colour match one stocked variant. Continue visual and source edge-case comparison. |
 | Product page with images, size/colour variants, price, stock, material/care text, reviews, related products | Partial | Gallery and variant selector work; refine variant price display, zoom, and design parity. |
 | Cart add/update/remove with persistence | Implemented | Django sessions provide persistence; compare browser behavior and test multiple variants. |
 | Checkout with customer/delivery fields, delivery-zone charges, server-side prices, promo discounts, loyalty item | Partial | Core flow works. Improve checkout summary and interaction parity. |
@@ -59,7 +59,7 @@ Updated: 2026-09-19. This is a **source-derived working checklist**, not a forma
 | Separate Supabase PostgreSQL database | Pending | User must create/provide a new project and connection string; then run Django migrations and public import. |
 | Supabase Storage | Partial | Server-side upload code exists; new bucket and server-only key are not configured. Existing local media need migration for remote deployment. |
 | Existing operational data migration | Pending | Fresh source export and mapping at cutover; dummy/test order records were intentionally excluded from local DB. |
-| Development tests and route rendering | Partial | `manage.py check` and 5 tests pass, including a fresh fixture load; test more admin, filtering, media, and error flows as parity work continues. |
+| Development tests and route rendering | Partial | `manage.py check` and 7 tests pass, including fresh fixture loading and catalog filter/pagination cases; test more admin, media, and error flows as parity work continues. |
 | Browser visual comparison | Pending | Previous session had no browser surface; compare desktop/mobile views against Next.js. |
 | Production deployment and domain switch | Pending | Configure Django host, HTTPS, persistent assets, background scheduling, backups, and monitoring after client approval. |
 | Live eSewa/payment launch | Deferred | User said payments are tests and not live yet. |

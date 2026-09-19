@@ -20,6 +20,32 @@ class PublicCatalogFixtureTests(TestCase):
             self.assertIsNotNone(find(product.primary_image.removeprefix("/static/")))
 
 
+class CatalogFilterTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name="T-Shirts", slug="t-shirts")
+
+    def test_pagination_preserves_search_and_merchandising_filter(self):
+        for number in range(25):
+            Product.objects.create(name=f"Sample Tee {number:02}", slug=f"sample-tee-{number:02}",
+                                   category=self.category, price=Decimal("100.00"), featured=True)
+        Product.objects.create(name="Different Coat", slug="different-coat", price=Decimal("100.00"))
+        response = self.client.get(reverse("catalog"), {"q": "Sample", "filter": "featured", "page": "1"})
+        self.assertEqual(response.context["page"].paginator.count, 25)
+        self.assertContains(response, 'name="filter" value="featured"')
+        self.assertContains(response, '?q=Sample&amp;filter=featured&amp;page=2')
+        next_page = self.client.get(reverse("catalog"), {"q": "Sample", "filter": "featured", "page": "2"})
+        self.assertEqual(len(next_page.context["page"].object_list), 1)
+
+    def test_size_and_color_must_be_available_on_same_variant(self):
+        product = Product.objects.create(name="Two Colours", slug="two-colours", price=Decimal("100.00"))
+        ProductVariant.objects.create(product=product, size="M", color="Blue", stock=2)
+        ProductVariant.objects.create(product=product, size="L", color="Red", stock=2)
+        unmatched = self.client.get(reverse("catalog"), {"size": "M", "color": "Red"})
+        self.assertEqual(unmatched.context["page"].paginator.count, 0)
+        matched = self.client.get(reverse("catalog"), {"size": "M", "color": "Blue"})
+        self.assertEqual(matched.context["page"].paginator.count, 1)
+
+
 class CheckoutFlowTests(TestCase):
     def setUp(self):
         self.category = Category.objects.create(name="T-Shirts", slug="t-shirts")

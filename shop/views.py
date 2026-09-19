@@ -51,12 +51,13 @@ def catalog(request):
         products = products.filter(collections__slug=collection)
     if tag := request.GET.get("tag"):
         products = products.filter(tags__slug=tag)
+    variant_filters = {}
     if size := request.GET.get("size"):
-        products = products.filter(variants__size=size, variants__stock__gt=0)
+        variant_filters["variants__size"] = size
     if color := request.GET.get("color"):
-        products = products.filter(variants__color__iexact=color, variants__stock__gt=0)
-    if request.GET.get("inStock") == "1":
-        products = products.filter(variants__stock__gt=0)
+        variant_filters["variants__color__iexact"] = color
+    if variant_filters or request.GET.get("inStock") == "1":
+        products = products.filter(variants__stock__gt=0, **variant_filters)
     flag = request.GET.get("filter")
     if flag == "featured":
         products = products.filter(featured=True)
@@ -79,12 +80,16 @@ def catalog(request):
     order = request.GET.get("sort", "newest")
     products = products.order_by({"price-asc": "price", "price-desc": "-price", "name-asc": "name"}.get(order, "-created_at")).distinct()
     page = Paginator(products, 24).get_page(request.GET.get("page"))
+    pagination_params = request.GET.copy()
+    pagination_params.pop("page", None)
     return render(request, "shop/catalog.html", {
         "page": page, "categories": Category.objects.filter(visible=True),
         "collections": Collection.objects.filter(visible=True), "tags": Tag.objects.all(),
         "sizes": ProductVariant.objects.filter(stock__gt=0).values_list("size", flat=True).distinct().order_by("size"),
         "colors": ProductVariant.objects.filter(stock__gt=0).exclude(color__isnull=True).exclude(color="").values_list("color", flat=True).distinct().order_by("color"),
         "selected": request.GET,
+        "active_filter": flag if flag in {"featured", "best-sellers", "new-arrivals"} else "",
+        "pagination_query": pagination_params.urlencode(),
     })
 
 

@@ -4,6 +4,7 @@
 <div class="page-banner"><div class="container"><p class="eyebrow light">Explore the collection</p><h1>Shop all styles</h1><p>Find something made for your every day.</p></div></div>
 <div class="container catalog-layout">
   <aside class="filters"><h2>Filter</h2><form method="get" action="{% url 'catalog' %}">
+    {% if active_filter %}<input type="hidden" name="filter" value="{{ active_filter }}">{% endif %}
     <label>Search<input type="search" name="q" placeholder="Search products" value="{{ selected.q }}"></label>
     <label>Category<select name="category"><option value="">All categories</option>{% for item in categories %}<option value="{{ item.slug }}" {% if selected.category == item.slug %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select></label>
     <label>Collection<select name="collection"><option value="">All collections</option>{% for item in collections %}<option value="{{ item.slug }}" {% if selected.collection == item.slug %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select></label>
@@ -16,6 +17,6 @@
     <button class="button" type="submit">Apply filters</button><a class="clear-filters" href="{% url 'catalog' %}">Clear all</a>
   </form></aside>
   <div class="catalog-main"><div class="catalog-top"><span>{{ page.paginator.count }} products</span></div><div class="product-grid">{% for product in page %}{% include 'shop/partials/product_card.html' %}{% empty %}<div class="empty-state"><h2>No products found</h2><p>Try another search or category.</p><a class="button" href="{% url 'catalog' %}">See all products</a></div>{% endfor %}</div>
-  {% if page.paginator.num_pages > 1 %}<nav class="pagination">{% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">← Previous</a>{% endif %}<span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>{% if page.has_next %}<a href="?page={{ page.next_page_number }}">Next →</a>{% endif %}</nav>{% endif %}</div>
+  {% if page.paginator.num_pages > 1 %}<nav class="pagination" aria-label="Catalog pages">{% if page.has_previous %}<a href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ page.previous_page_number }}">← Previous</a>{% endif %}<span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>{% if page.has_next %}<a href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ page.next_page_number }}">Next →</a>{% endif %}</nav>{% endif %}</div>
 </div>
 {% endblock %}
