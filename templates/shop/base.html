@@ -1,0 +1,40 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="{{ site_settings.site_tagline|default:'Premium clothing and accessories' }}">
+  <title>{% block title %}{{ site_settings.site_name|default:'Clothing Shop' }}{% endblock %}</title>
+  <link rel="icon" href="{% static 'branding/logo.jpg' %}">
+  <link rel="stylesheet" href="{% static 'css/site.css' %}">
+  <script src="{% static 'js/site.js' %}" defer></script>
+</head>
+<body>
+  <div class="announcement">New arrivals are here · Shop your next favourite look <a href="{% url 'catalog' %}">Explore now →</a></div>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="{% url 'home' %}"><span class="brand-mark">J</span><span>{{ site_settings.site_name|default:'Clothing Shop' }}</span></a>
+      <button class="mobile-menu" type="button" aria-label="Toggle navigation" data-menu-toggle>☰</button>
+      <nav class="main-nav" data-nav>
+        <a href="{% url 'home' %}">Home</a>
+        <a href="{% url 'catalog' %}">Shop All</a>
+        {% for category in nav_categories|slice:':4' %}<a href="{% url 'catalog' %}?category={{ category.slug }}">{{ category.name }}</a>{% endfor %}
+        <a href="{% url 'contact' %}">Contact</a>
+      </nav>
+      <div class="header-actions"><a class="cart-link" href="{% url 'cart' %}" aria-label="View cart">Bag <span class="cart-count">{{ cart_count }}</span></a></div>
+    </div>
+  </header>
+  {% if messages %}<div class="container messages">{% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+  <main>{% block content %}{% endblock %}</main>
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div><a class="brand footer-brand" href="{% url 'home' %}"><span class="brand-mark">J</span><span>{{ site_settings.site_name|default:'Clothing Shop' }}</span></a><p>{{ site_settings.footer_about|default:'Thoughtful pieces for every day.' }}</p></div>
+      <div><h3>Explore</h3><a href="{% url 'catalog' %}">Shop all</a><a href="{% url 'catalog' %}?filter=new-arrivals">New arrivals</a><a href="{% url 'catalog' %}?filter=best-sellers">Best sellers</a></div>
+      <div><h3>Help</h3><a href="{% url 'contact' %}">Contact us</a><a href="{% url 'cart' %}">Your bag</a></div>
+      <div><h3>Get in touch</h3><p>{{ site_settings.address|default:'Kathmandu, Nepal' }}</p><p>{{ site_settings.phone }}</p><p>{{ site_settings.email }}</p></div>
+    </div>
+    <div class="container footer-bottom">© {% now 'Y' %} {{ site_settings.footer_copyright|default:'Clothing Shop. All rights reserved.' }}</div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,919 @@
+[
+  {
+    "model": "shop.category",
+    "pk": "cmtf6vmo10000qbgs8k752rzd",
+    "fields": {
+      "created_at": "2026-09-19T09:36:53.680Z",
+      "updated_at": "2026-09-19T09:36:53.680Z",
+      "name": "T-Shirts",
+      "slug": "t-shirts",
+      "description": "",
+      "image": "/static/catalog/categories/t-shirts.jpg",
+      "order": 1,
+      "visible": true
+    }
+  },
+  {
+    "model": "shop.category",
+    "pk": "cmtf6vnow0001qbgsg7mfi31v",
+    "fields": {
+      "created_at": "2026-09-19T09:36:53.680Z",
+      "updated_at": "2026-09-19T09:36:53.680Z",
+      "name": "Hoodies",
+      "slug": "hoodies",
+      "description": "",
+      "image": "/static/catalog/categories/hoodies.jpg",
+      "order": 2,
+      "visible": true
+    }
+  },
+  {
+    "model": "shop.category",
+    "pk": "cmtf6wcbl0001qbqqtcf1c7cf",
+    "fields": {
+      "created_at": "2026-09-19T09:36:53.682Z",
+      "updated_at": "2026-09-19T09:36:53.682Z",
+      "name": "New Arrivals",
+      "slug": "new-arrivals",
+      "description": "",
+      "image": "/static/catalog/categories/categories-1788083284657-6d8c1ec0fa33.jpg",
+      "order": 0,
+      "visible": true
+    }
+  },
+  {
+    "model": "shop.category",
+    "pk": "cmtf6wfkf0004qbqqlt2fsoxl",
+    "fields": {
+      "created_at": "2026-09-19T09:36:53.681Z",
+      "updated_at": "2026-09-19T09:36:53.681Z",
+      "name": "Sweatshirts",
+      "slug": "sweatshirts",
+      "description": "",
+      "image": "/static/catalog/categories/sweatshirts.jpg",
+      "order": 3,
+      "visible": true
+    }
+  },
+  {
+    "model": "shop.category",
+    "pk": "cmtf6wgl70005qbqq6q9gn6o7",
+    "fields": {
+      "created_at": "2026-09-19T09:36:53.681Z",
+      "updated_at": "2026-09-19T09:36:53.681Z",
+      "name": "Jackets",
+      "slug": "jackets",
+      "description": "",
+      "image": "/static/catalog/categories/jackets.jpg",
+      "order": 4,
+      "visible": true
+    }
+  },
+  {
+    "model": "shop.category",
+    "pk": "cmtf6whlt0006qbqqov9zn3r1",
+    "fields": {
+      "created_at": "2026-09-19T09:36:53.681Z",
+      "updated_at": "2026-09-19T09:36:53.681Z",
+      "name": "Bottoms",
+      "slug": "bottoms",
+      "description": "",
+      "image": "/static/catalog/categories/bottoms.jpg",
+      "order": 5,
+      "visible": true
+    }
+  },
+  {
+    "model": "shop.category",
+    "pk": "cmtf6wime0007qbqq35cy54y0",
+    "fields": {
+      "created_at": "2026-09-19T09:36:53.681Z",
+      "updated_at": "2026-09-19T09:36:53.681Z",
+      "name": "Stickers",
+      "slug": "stickers",
+      "description": "",
+      "image": "/static/catalog/categories/stickers.jpg",
+      "order": 6,
+      "visible": true
+    }
+  },
+  {
+    "model": "shop.category",
+    "pk": "cmtf6wjn10008qbqqmhatzf90",
+    "fields": {
+      "created_at": "2026-09-19T09:36:53.682Z",
+      "updated_at": "2026-09-19T09:36:53.682Z",
+      "name": "Jewellery",
+      "slug": "jewellery",
+      "description": "",
+      "image": "/static/catalog/categories/jewellery.jpg",
+      "order": 7,
+      "visible": true
+    }
+  },
+  {
+    "model": "shop.category",
+    "pk": "cmtf6wkng0009qbqqecz6nspl",
+    "fields": {
+      "created_at": "2026-09-19T09:36:53.682Z",
+      "updated_at": "2026-09-19T09:36:53.682Z",
+      "name": "Socks",
+      "slug": "socks",
+      "description": "",
+      "image": "/static/catalog/categories/socks.jpg",
+      "order": 8,
+      "visible": true
+    }
+  },
+  {
+    "model": "shop.collection",
+    "pk": "cmtf6wlo2000aqbqqqrhv2xcs",
+    "fields": {
+      "created_at": "2026-09-19T09:36:53.849Z",
+      "updated_at": "2026-09-19T09:36:53.849Z",
+      "name": "Summer 2026",
+      "slug": "summer-2026",
+      "description": "",
+      "image": "",
+      "visible": true,
+      "order": 0
+    }
+  },
+  {
+    "model": "shop.collection",
+    "pk": "cmtf6wmon000bqbqqbt1jizp0",
+    "fields": {
+      "created_at": "2026-09-19T09:36:53.850Z",
+      "updated_at": "2026-09-19T09:36:53.850Z",
+      "name": "Winter Drop",
+      "slug": "winter-drop",
+      "description": "",
+      "image": "",
+      "visible": true,
+      "order": 1
+    }
+  },
+  {
+    "model": "shop.collection",
+    "pk": "cmtf6wnt7000cqbqqs5pnnul5",
+    "fields": {
+      "created_at": "2026-09-19T09:36:53.851Z",
+      "updated_at": "2026-09-19T09:36:53.851Z",
+      "name": "Street Style",
+      "slug": "street-style",
+      "description": "",
+      "image": "",
+      "visible": true,
+      "order": 2
+    }
+  },
+  {
+    "model": "shop.tag",
+    "pk": "cmtf6wotp000dqbqq3gglmxhl",
+    "fields": {
+      "name": "Oversized",
+      "slug": "oversized"
+    }
+  },
+  {
+    "model": "shop.tag",
+    "pk": "cmtf6wpuj000eqbqqjqlfewiq",
+    "fields": {
+      "name": "Printed",
+      "slug": "printed"
+    }
+  },
+  {
+    "model": "shop.tag",
+    "pk": "cmtf6wqv0000fqbqqqqlq6mk7",
+    "fields": {
+      "name": "Minimal",
+      "slug": "minimal"
+    }
+  },
+  {
+    "model": "shop.tag",
+    "pk": "cmtf6wrvm000gqbqq7xd7p7vh",
+    "fields": {
+      "name": "Solid",
+      "slug": "solid"
+    }
+  },
+  {
+    "model": "shop.tag",
+    "pk": "cmtf6wsw4000hqbqqoqkmo16t",
+    "fields": {
+      "name": "Graphic",
+      "slug": "graphic"
+    }
+  },
+  {
+    "model": "shop.tag",
+    "pk": "cmtf6wtwm000iqbqqzax414oe",
+    "fields": {
+      "name": "Unisex",
+      "slug": "unisex"
+    }
+  },
+  {
+    "model": "shop.tag",
+    "pk": "cmtf6wuxg000jqbqqea0scjyc",
+    "fields": {
+      "name": "Premium",
+      "slug": "premium"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": "cmtfgxzew0009qb7cf4cjnueu",
+    "fields": {
+      "created_at": "2026-09-19T09:36:54.330Z",
+      "updated_at": "2026-09-19T09:36:54.330Z",
+      "name": "jacket ",
+      "slug": "jacket",
+      "sku": null,
+      "category": "cmtf6wgl70005qbqq6q9gn6o7",
+      "description": "Good jacket ",
+      "price": "1200.00",
+      "discount_price": "1000.00",
+      "images": [
+        "/static/catalog/products/products-1788073721193-17dac953ffef.jpg"
+      ],
+      "gallery_images": [
+        "/static/catalog/products/products-1788073731873-164e1ed8f1d2.jpg",
+        "/static/catalog/products/products-1788073736232-254900d8d858.jpeg"
+      ],
+      "colors": [
+        "Red",
+        "Black"
+      ],
+      "material": "100% cotten ",
+      "care_instructions": "",
+      "featured": false,
+      "best_seller": false,
+      "new_arrival": true,
+      "visibility": true,
+      "tags": [
+        "cmtf6wotp000dqbqq3gglmxhl",
+        "cmtf6wuxg000jqbqqea0scjyc"
+      ],
+      "collections": [
+        "cmtf6wlo2000aqbqqqrhv2xcs"
+      ]
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": "cmtfpcyaw0006pos5sr8myd1i",
+    "fields": {
+      "created_at": "2026-09-19T09:36:54.326Z",
+      "updated_at": "2026-09-19T09:36:54.326Z",
+      "name": "oversize hoodie ",
+      "slug": "h",
+      "sku": null,
+      "category": "cmtf6vnow0001qbgsg7mfi31v",
+      "description": "best trending hoodie  ",
+      "price": "2000.00",
+      "discount_price": "1800.00",
+      "images": [
+        "/static/catalog/products/products-1788087857121-5e368284df16.webp",
+        "/static/catalog/products/products-1788087860780-9da624027192.jpg"
+      ],
+      "gallery_images": [],
+      "colors": [
+        "black",
+        "gray",
+        "green"
+      ],
+      "material": "",
+      "care_instructions": "",
+      "featured": true,
+      "best_seller": false,
+      "new_arrival": true,
+      "visibility": true,
+      "tags": [
+        "cmtf6wotp000dqbqq3gglmxhl",
+        "cmtf6wtwm000iqbqqzax414oe",
+        "cmtf6wuxg000jqbqqea0scjyc"
+      ],
+      "collections": []
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": "cmtfrbotb0007qbvn0uyxer49",
+    "fields": {
+      "created_at": "2026-09-19T09:36:54.329Z",
+      "updated_at": "2026-09-19T09:36:54.329Z",
+      "name": "T-shirt ",
+      "slug": "t",
+      "sku": null,
+      "category": "cmtf6vmo10000qbgs8k752rzd",
+      "description": "Best for summer ",
+      "price": "1500.00",
+      "discount_price": "1200.00",
+      "images": [
+        "/static/catalog/products/products-1788096697086-5a3f9a7d570e.webp",
+        "/static/catalog/products/products-1788096702811-e3368dd11964.webp"
+      ],
+      "gallery_images": [
+        "/static/catalog/products/products-1788096707831-5753b5c451f3.webp",
+        "/static/catalog/products/products-1788096711035-14e9423df9e8.webp"
+      ],
+      "colors": [
+        "Black",
+        "White"
+      ],
+      "material": "",
+      "care_instructions": "Don't wash in machine ",
+      "featured": false,
+      "best_seller": true,
+      "new_arrival": true,
+      "visibility": true,
+      "tags": [
+        "cmtf6wotp000dqbqq3gglmxhl",
+        "cmtf6wtwm000iqbqqzax414oe",
+        "cmtf6wuxg000jqbqqea0scjyc"
+      ],
+      "collections": []
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": "cmtfu9t6f000ipoytzby9lc3a",
+    "fields": {
+      "created_at": "2026-09-19T09:36:54.330Z",
+      "updated_at": "2026-09-19T09:36:54.330Z",
+      "name": "ring ",
+      "slug": "ring",
+      "sku": null,
+      "category": "cmtf6wjn10008qbqqmhatzf90",
+      "description": "",
+      "price": "2.00",
+      "discount_price": "1.00",
+      "images": [
+        "/static/catalog/products/products-1788096122227-cd7ef059a7d7.jpg"
+      ],
+      "gallery_images": [
+        "/static/catalog/products/products-1788096127813-07d062e8cb25.webp"
+      ],
+      "colors": [
+        "Silver",
+        "Gold"
+      ],
+      "material": "",
+      "care_instructions": "",
+      "featured": true,
+      "best_seller": false,
+      "new_arrival": true,
+      "visibility": true,
+      "tags": [
+        "cmtf6wrvm000gqbqq7xd7p7vh",
+        "cmtf6wtwm000iqbqqzax414oe",
+        "cmtf6wuxg000jqbqqea0scjyc"
+      ],
+      "collections": []
+    }
+  },
+  {
+    "model": "shop.productvariant",
+    "pk": "cmtfpd31k0007pos5rg1i243c",
+    "fields": {
+      "product": "cmtfpcyaw0006pos5sr8myd1i",
+      "size": "S",
+      "color": "black",
+      "stock": 4,
+      "additional_price": "0.00"
+    }
+  },
+  {
+    "model": "shop.productvariant",
+    "pk": "cmtfpd31k0008pos5ub8wcfw6",
+    "fields": {
+      "product": "cmtfpcyaw0006pos5sr8myd1i",
+      "size": "S",
+      "color": "gray",
+      "stock": 2,
+      "additional_price": "0.00"
+    }
+  },
+  {
+    "model": "shop.productvariant",
+    "pk": "cmtfpd31k0009pos5ypctga9n",
+    "fields": {
+      "product": "cmtfpcyaw0006pos5sr8myd1i",
+      "size": "S",
+      "color": "green",
+      "stock": 2,
+      "additional_price": "0.00"
+    }
+  },
+  {
+    "model": "shop.productvariant",
+    "pk": "cmtfpd31k000apos5alemnanh",
+    "fields": {
+      "product": "cmtfpcyaw0006pos5sr8myd1i",
+      "size": "L",
+      "color": "black",
+      "stock": 1,
+      "additional_price": "0.00"
+    }
+  },
+  {
+    "model": "shop.productvariant",
+    "pk": "cmtfpd31k000bpos5ih7eoxau",
+    "fields": {
+      "product": "cmtfpcyaw0006pos5sr8myd1i",
+      "size": "L",
+      "color": "gray",
+      "stock": 6,
+      "additional_price": "0.00"
+    }
+  },
+  {
+    "model": "shop.productvariant",
+    "pk": "cmtfuma6y0018poyt6obuqoou",
+    "fields": {
+      "product": "cmtfrbotb0007qbvn0uyxer49",
+      "size": "L",
+      "color": "Black",
+      "stock": 10,
+      "additional_price": "0.00"
+    }
+  },
+  {
+    "model": "shop.productvariant",
+    "pk": "cmtfuma6y0019poytuwspdsmk",
+    "fields": {
+      "product": "cmtfrbotb0007qbvn0uyxer49",
+      "size": "L",
+      "color": "White",
+      "stock": 7,
+      "additional_price": "0.00"
+    }
+  },
+  {
+    "model": "shop.productvariant",
+    "pk": "cmtfuma6y001apoytsn2fk78e",
+    "fields": {
+      "product": "cmtfrbotb0007qbvn0uyxer49",
+      "size": "M",
+      "color": "Black",
+      "stock": 5,
+      "additional_price": "0.00"
+    }
+  },
+  {
+    "model": "shop.productvariant",
+    "pk": "cmtfuma6y001bpoytmf4r89wd",
+    "fields": {
+      "product": "cmtfrbotb0007qbvn0uyxer49",
+      "size": "M",
+      "color": "White",
+      "stock": 10,
+      "additional_price": "0.00"
+    }
+  },
+  {
+    "model": "shop.productvariant",
+    "pk": "cmtg5jgec000tqb12ti7xwbbt",
+    "fields": {
+      "product": "cmtfu9t6f000ipoytzby9lc3a",
+      "size": "L",
+      "color": "Silver",
+      "stock": 3,
+      "additional_price": "0.00"
+    }
+  },
+  {
+    "model": "shop.productvariant",
+    "pk": "cmtg5jgec000uqb12z13s5nud",
+    "fields": {
+      "product": "cmtfu9t6f000ipoytzby9lc3a",
+      "size": "M",
+      "color": "Gold",
+      "stock": 17,
+      "additional_price": "0.00"
+    }
+  },
+  {
+    "model": "shop.productvariant",
+    "pk": "cmtg5jgec000vqb12ddm0kfg5",
+    "fields": {
+      "product": "cmtfu9t6f000ipoytzby9lc3a",
+      "size": "M",
+      "color": "Silver",
+      "stock": 12,
+      "additional_price": "0.00"
+    }
+  },
+  {
+    "model": "shop.productvariant",
+    "pk": "cmtl489b0001nqb66ohs96ixl",
+    "fields": {
+      "product": "cmtfgxzew0009qb7cf4cjnueu",
+      "size": "L",
+      "color": "Black",
+      "stock": 9,
+      "additional_price": "0.00"
+    }
+  },
+  {
+    "model": "shop.productvariant",
+    "pk": "cmtl489b0001oqb66lqdcsvb5",
+    "fields": {
+      "product": "cmtfgxzew0009qb7cf4cjnueu",
+      "size": "M",
+      "color": "Red",
+      "stock": 10,
+      "additional_price": "0.00"
+    }
+  },
+  {
+    "model": "shop.heroslide",
+    "pk": "cmtfdevsb0000qbot5z6n0vsh",
+    "fields": {
+      "created_at": "2026-09-19T09:36:55.441Z",
+      "updated_at": "2026-09-19T09:36:55.441Z",
+      "title": "New Arrivals Are Here",
+      "subtitle": "Explore the latest T-Shirts, Hoodies, Jackets and more.",
+      "image": "https://placehold.co/1200x500/1a1a2e/fff?text=New+Arrivals",
+      "link": "/catalog?filter=new-arrivals",
+      "button_text": "Shop New Arrivals",
+      "order": 0,
+      "visible": true
+    }
+  },
+  {
+    "model": "shop.heroslide",
+    "pk": "cmtfdevsb0001qbotijxd3omi",
+    "fields": {
+      "created_at": "2026-09-19T09:36:55.443Z",
+      "updated_at": "2026-09-19T09:36:55.443Z",
+      "title": "Winter Drop 2026",
+      "subtitle": "Cozy and stylish pieces to keep you warm this season.",
+      "image": "https://placehold.co/1200x500/2d2d2d/fff?text=Winter+Drop",
+      "link": "/catalog?collection=winter-drop",
+      "button_text": "Explore Collection",
+      "order": 1,
+      "visible": true
+    }
+  },
+  {
+    "model": "shop.heroslide",
+    "pk": "cmtfdevsb0002qbotfg75rmmc",
+    "fields": {
+      "created_at": "2026-09-19T09:36:55.443Z",
+      "updated_at": "2026-09-19T09:36:55.443Z",
+      "title": "Street Style",
+      "subtitle": "Urban-inspired looks for everyday wear.",
+      "image": "https://placehold.co/1200x500/0f3460/fff?text=Street+Style",
+      "link": "/catalog?collection=street-style",
+      "button_text": "Shop Now",
+      "order": 2,
+      "visible": true
+    }
+  },
+  {
+    "model": "shop.heroslide",
+    "pk": "cmthh2w5v002iqbpr235x0fsc",
+    "fields": {
+      "created_at": "2026-09-19T09:36:55.444Z",
+      "updated_at": "2026-09-19T09:36:55.444Z",
+      "title": "Offer ",
+      "subtitle": "friday sale offer ",
+      "image": "/static/catalog/hero/hero-1788194898184-4167e2634f07.jpg",
+      "link": "/sale",
+      "button_text": "Shop Now",
+      "order": 3,
+      "visible": true
+    }
+  },
+  {
+    "model": "shop.homepagesection",
+    "pk": "cmtfdewe10003qbot7abrhrmj",
+    "fields": {
+      "created_at": "2026-09-19T09:36:55.761Z",
+      "updated_at": "2026-09-19T09:36:55.761Z",
+      "key": "hero",
+      "title": "Hero",
+      "subtitle": "",
+      "visible": true,
+      "order": 0,
+      "content": {}
+    }
+  },
+  {
+    "model": "shop.homepagesection",
+    "pk": "cmtfdexhc0004qbot75cr8rvw",
+    "fields": {
+      "created_at": "2026-09-19T09:36:55.762Z",
+      "updated_at": "2026-09-19T09:36:55.762Z",
+      "key": "newArrivals",
+      "title": "New Arrivals",
+      "subtitle": "",
+      "visible": true,
+      "order": 1,
+      "content": {}
+    }
+  },
+  {
+    "model": "shop.homepagesection",
+    "pk": "cmtfdeyjy0005qbotcpwwpbxr",
+    "fields": {
+      "created_at": "2026-09-19T09:36:55.763Z",
+      "updated_at": "2026-09-19T09:36:55.763Z",
+      "key": "featured",
+      "title": "Featured Products",
+      "subtitle": "",
+      "visible": true,
+      "order": 2,
+      "content": {}
+    }
+  },
+  {
+    "model": "shop.homepagesection",
+    "pk": "cmtfdezme0006qbot64xx0fho",
+    "fields": {
+      "created_at": "2026-09-19T09:36:55.763Z",
+      "updated_at": "2026-09-19T09:36:55.763Z",
+      "key": "collections",
+      "title": "Shop by Collection",
+      "subtitle": "",
+      "visible": true,
+      "order": 3,
+      "content": {}
+    }
+  },
+  {
+    "model": "shop.homepagesection",
+    "pk": "cmtfdf0oy0007qbotc9w7ewz9",
+    "fields": {
+      "created_at": "2026-09-19T09:36:55.763Z",
+      "updated_at": "2026-09-19T09:36:55.763Z",
+      "key": "categories",
+      "title": "Shop by Category",
+      "subtitle": "",
+      "visible": true,
+      "order": 4,
+      "content": {}
+    }
+  },
+  {
+    "model": "shop.homepagesection",
+    "pk": "cmtfdf1s00008qbotm7z3uef0",
+    "fields": {
+      "created_at": "2026-09-19T09:36:55.764Z",
+      "updated_at": "2026-09-19T09:36:55.764Z",
+      "key": "bestSellers",
+      "title": "Best Sellers",
+      "subtitle": "",
+      "visible": true,
+      "order": 5,
+      "content": {}
+    }
+  },
+  {
+    "model": "shop.homepagesection",
+    "pk": "cmtfdf2uv0009qbotz8igpryk",
+    "fields": {
+      "created_at": "2026-09-19T09:36:55.764Z",
+      "updated_at": "2026-09-19T09:36:55.764Z",
+      "key": "whyUs",
+      "title": "Why Choose Us",
+      "subtitle": "",
+      "visible": true,
+      "order": 6,
+      "content": [
+        {
+          "icon": "🛡️",
+          "title": "Premium Quality",
+          "desc": "Every product is carefully selected."
+        },
+        {
+          "icon": "🚚",
+          "title": "Fast Delivery",
+          "desc": "Inside valley same-day, outside 2-3 days."
+        },
+        {
+          "icon": "🔄",
+          "title": "Easy Returns",
+          "desc": "Return within 7 days, no questions asked."
+        },
+        {
+          "icon": "💬",
+          "title": "24/7 Support",
+          "desc": "Our team is always ready to help."
+        }
+      ]
+    }
+  },
+  {
+    "model": "shop.homepagesection",
+    "pk": "cmtfdf3xd000aqbotriikxh0l",
+    "fields": {
+      "created_at": "2026-09-19T09:36:55.764Z",
+      "updated_at": "2026-09-19T09:36:55.764Z",
+      "key": "reviews",
+      "title": "Customer Reviews",
+      "subtitle": "",
+      "visible": true,
+      "order": 7,
+      "content": {}
+    }
+  },
+  {
+    "model": "shop.homepagesection",
+    "pk": "cmtfdf4zt000bqbotlhaebunj",
+    "fields": {
+      "created_at": "2026-09-19T09:36:55.764Z",
+      "updated_at": "2026-09-19T09:36:55.764Z",
+      "key": "instagram",
+      "title": "Follow on Instagram",
+      "subtitle": "",
+      "visible": true,
+      "order": 8,
+      "content": {}
+    }
+  },
+  {
+    "model": "shop.homepagesection",
+    "pk": "cmtfdf62n000cqbotzxm2yqv2",
+    "fields": {
+      "created_at": "2026-09-19T09:36:55.765Z",
+      "updated_at": "2026-09-19T09:36:55.765Z",
+      "key": "facebook",
+      "title": "Follow on Facebook",
+      "subtitle": "",
+      "visible": false,
+      "order": 9,
+      "content": {}
+    }
+  },
+  {
+    "model": "shop.homepagesection",
+    "pk": "cmtfdf79r000dqbotdymjroom",
+    "fields": {
+      "created_at": "2026-09-19T09:36:55.765Z",
+      "updated_at": "2026-09-19T09:36:55.765Z",
+      "key": "contact",
+      "title": "Contact Us",
+      "subtitle": "",
+      "visible": true,
+      "order": 10,
+      "content": {}
+    }
+  },
+  {
+    "model": "shop.homepagesection",
+    "pk": "cmtfdf8c3000eqbotft2jzvlj",
+    "fields": {
+      "created_at": "2026-09-19T09:36:55.765Z",
+      "updated_at": "2026-09-19T09:36:55.765Z",
+      "key": "newsletter",
+      "title": "Newsletter",
+      "subtitle": "",
+      "visible": true,
+      "order": 11,
+      "content": {}
+    }
+  },
+  {
+    "model": "shop.promobanner",
+    "pk": "cmtfdfa0x000fqbotp609c6v6",
+    "fields": {
+      "created_at": "2026-09-19T09:36:55.968Z",
+      "updated_at": "2026-09-19T09:36:55.968Z",
+      "text": "🎉 Free delivery inside valley on orders above Rs 1,500!",
+      "link": "/catalog",
+      "visible": true,
+      "order": 0
+    }
+  },
+  {
+    "model": "shop.setting",
+    "pk": "09b9919e690647a89d31179fa51a1a59",
+    "fields": {
+      "key": "site_name",
+      "value": "Clothing Shop",
+      "updated_at": "2026-09-19T09:36:56.142Z"
+    }
+  },
+  {
+    "model": "shop.setting",
+    "pk": "0b1b4b1282244dbaa968cbe7c9c19f5b",
+    "fields": {
+      "key": "newsletter_title",
+      "value": "Stay in Style",
+      "updated_at": "2026-09-19T09:36:56.142Z"
+    }
+  },
+  {
+    "model": "shop.setting",
+    "pk": "134ea7ab28e343cdad4feaadf29c1fb7",
+    "fields": {
+      "key": "newsletter_subtitle",
+      "value": "Subscribe for exclusive offers and the latest drops.",
+      "updated_at": "2026-09-19T09:36:56.143Z"
+    }
+  },
+  {
+    "model": "shop.setting",
+    "pk": "1e16b52b423a4dc08896939b2e09761a",
+    "fields": {
+      "key": "site_tagline",
+      "value": "Premium Clothing Store",
+      "updated_at": "2026-09-19T09:36:56.142Z"
+    }
+  },
+  {
+    "model": "shop.setting",
+    "pk": "3e2b784e843c426abe794acd5911b516",
+    "fields": {
+      "key": "email",
+      "value": "hello@clothingshop.com",
+      "updated_at": "2026-09-19T09:36:56.141Z"
+    }
+  },
+  {
+    "model": "shop.setting",
+    "pk": "5776ca7a3b4640c78aa1890a23cb335c",
+    "fields": {
+      "key": "currency",
+      "value": "Rs",
+      "updated_at": "2026-09-19T09:36:56.142Z"
+    }
+  },
+  {
+    "model": "shop.setting",
+    "pk": "5c80af7770d843d5a9f86d1fd8756686",
+    "fields": {
+      "key": "phone",
+      "value": "986-0000000",
+      "updated_at": "2026-09-19T09:36:56.141Z"
+    }
+  },
+  {
+    "model": "shop.setting",
+    "pk": "7d8bd1d2de3744338c04d54937582a64",
+    "fields": {
+      "key": "footer_copyright",
+      "value": "Clothing Shop. All rights reserved.",
+      "updated_at": "2026-09-19T09:36:56.142Z"
+    }
+  },
+  {
+    "model": "shop.setting",
+    "pk": "9310cf68085340d7b358778c5e21e292",
+    "fields": {
+      "key": "footer_about",
+      "value": "Your premier destination for premium clothing. T-Shirts, Hoodies, Jackets and more.",
+      "updated_at": "2026-09-19T09:36:56.142Z"
+    }
+  },
+  {
+    "model": "shop.setting",
+    "pk": "9828109c04314b81964efbec0a5771ab",
+    "fields": {
+      "key": "instagram",
+      "value": "https://www.instagram.com/clothingshop",
+      "updated_at": "2026-09-19T09:36:56.141Z"
+    }
+  },
+  {
+    "model": "shop.setting",
+    "pk": "99b2665a2ea2455f90e2958b9db1494a",
+    "fields": {
+      "key": "facebook",
+      "value": "https://www.facebook.com/clothingshop",
+      "updated_at": "2026-09-19T09:36:56.141Z"
+    }
+  },
+  {
+    "model": "shop.setting",
+    "pk": "ca9f6610882f49919cd5c3d2a67789d4",
+    "fields": {
+      "key": "delivery_outside_valley",
+      "value": "100",
+      "updated_at": "2026-09-19T09:36:56.143Z"
+    }
+  },
+  {
+    "model": "shop.setting",
+    "pk": "cb7f7720bed3451e8ff36aec9cf6c6d8",
+    "fields": {
+      "key": "address",
+      "value": "Kathmandu, Nepal",
+      "updated_at": "2026-09-19T09:36:56.141Z"
+    }
+  },
+  {
+    "model": "shop.setting",
+    "pk": "e5c1ad93dcfa483cb4bd9f6876ffc90d",
+    "fields": {
+      "key": "delivery_inside_valley",
+      "value": "0",
+      "updated_at": "2026-09-19T09:36:56.143Z"
+    }
+  }
+]

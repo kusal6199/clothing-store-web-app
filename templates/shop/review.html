@@ -1,0 +1,3 @@
+{% extends 'shop/base.html' %}
+{% block title %}Leave a Review{% endblock %}
+{% block content %}<div class="container page-content narrow"><p class="eyebrow">Your feedback matters</p><h1>Review {{ review.product.name|default:'your purchase' }}</h1><form method="post" class="contact-form">{% csrf_token %}{% for field in form %}<div class="form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}<button class="button" type="submit">Submit review</button></form></div>{% endblock %}

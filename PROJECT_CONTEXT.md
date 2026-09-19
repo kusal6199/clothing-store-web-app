@@ -1,0 +1,62 @@
+# Project handoff for future VS Code / Codex chats
+
+Updated: 2026-09-19
+
+## User goal and relationship to the original
+
+The client wants the existing clothing ecommerce project rebuilt as a Django application. The user asked for a separate folder on the Desktop so both versions can be developed and compared side by side. The original project is `/Users/kushalkadel/Desktop/Jersey-main`; this Django project is `/Users/kushalkadel/Desktop/Jersey-Django`. Do not overwrite the original site or point Django migrations at its database.
+
+The original is a Next.js/React/TypeScript storefront and custom admin. Its current source of truth is `prisma/schema.prisma`, `src/app`, `src/components`, and `src/lib` in `Jersey-main`. Its README describes an older jersey version and is partly stale; inspect code and current schema for feature comparisons. The original database URL points to Supabase PostgreSQL. The user explicitly said existing orders and eSewa/payment records are dummy tests and payment work is not a priority.
+
+## Architecture chosen
+
+- Django 5.2, Django templates, CSS, and small browser JavaScript. No Next.js or React runtime in this folder.
+- Django ORM; local SQLite for independent development. `config/settings.py` accepts `DATABASE_URL` for a **separate** Supabase PostgreSQL project later.
+- Django admin for model management, with a custom overview page at `/dashboard/`.
+- Local `media/uploads/` contains copied original public image assets. New admin uploads can use a public Supabase Storage bucket if server-only settings are provided.
+- `.env` contains a new local development secret. It has no original database credentials. Do not print or commit secrets.
+
+## Current implementation
+
+- Storefront: homepage with dynamic sections and slides, catalog/search/filters, product details and gallery, session cart, checkout, contact form, review form, sitemap, and robots.txt.
+- Store logic: server-side prices, delivery charges, promo code discounts, variant stock checks, optional loyalty reward, pending order creation, and idempotent admin action to confirm paid orders, deduct stock, and update loyalty progress.
+- Admin: products/variants, categories, collections, tags, homepage content, messages, reviews, settings, orders, promo codes, plus CSV order export.
+- Scheduled `send_review_requests` management command; SMTP can be configured later.
+- Public catalog/homepage data was copied read-only from the original Supabase database into local `db.sqlite3`: 4 products, 9 categories, 4 hero slides, and associated public content. Operational data, customer orders/messages, and original admin credentials were not copied. The import script is `scripts/import_public_catalog.py`.
+- `README.md` has setup, database, and Storage instructions. The project has its own `.venv` and dependencies installed.
+- The repository now has a sanitized `fixtures/public_catalog.json` and 21 referenced public images under `static/catalog/`. A fresh clone can run `loaddata` without access to the original database. The fixture excludes reviews, operational records, payment settings, and credentials. The local database and `media/` remain ignored.
+
+## Verification already done
+
+- `manage.py check` passed in the Desktop copy.
+- Four Django tests passed for checkout, promo pricing, loyalty accounting, and review email deduplication.
+- A fifth test now loads the public fixture into a fresh test database and checks that the storefront and packaged images render. All five tests pass.
+- Django test client rendered the homepage, catalog, product, cart, checkout, contact, sitemap, admin login, and loyalty lookup successfully.
+- Browser visual QA could not be performed because no browser surface was available in that session. The visual design still needs comparison against the original site.
+- The original `Jersey-main` Git working tree was clean after creating this separate project.
+
+The source-derived feature checklist and current status live in `REQUIREMENTS.md`. It is a working checklist, not a formal client sign-off.
+
+## Next work
+
+1. Run the two sites side by side and compare every public page and admin workflow for functionality and appearance. Improve the Django templates/CSS where needed.
+2. Create a Django superuser locally with `.venv/bin/python manage.py createsuperuser` when admin access is needed; no default credentials were imported.
+3. Keep order/payment handling in test scope unless the user changes priorities. Do not enable live eSewa from the original's test integration.
+4. When the user provides a **new** Supabase project, configure its database and Storage separately, migrate the Django schema there, and import public data with `scripts/import_public_catalog.py`. Do not run Django migrations on the original Prisma database.
+5. Before launch, plan fresh operational-data migration, persistent media URLs, production hosting/HTTPS settings, and end-to-end browser QA.
+
+## Useful commands
+
+```bash
+cd /Users/kushalkadel/Desktop/Jersey-Django
+./run-dev.sh
+.venv/bin/python manage.py check
+.venv/bin/python manage.py test shop
+.venv/bin/python manage.py createsuperuser
+```
+
+The original site can run on port 3000; Django runs on port 8000. See `README.md` for environment details.
+
+## GitHub review workflow
+
+The remote at `https://github.com/kusal6199/clothing-store-web-app.git` was inspected on 2026-09-19 and was empty. Git was initialized locally; `main` contains only the empty root commit `f653940` and has been pushed to `origin/main`. The Django application belongs on `test`, which should branch from that root. After each verified milestone, update this handoff and `REQUIREMENTS.md`, commit, and push `origin/test`. The user reviews and manually merges into `main`. Never force-push or put application changes directly on `main`. Verify ignored files and do not publish credentials, the local SQLite database, customer records, or other private data.

@@ -1,0 +1,3 @@
+{% extends 'shop/base.html' %}
+{% block title %}Order Received{% endblock %}
+{% block content %}<div class="container success-state"><div class="success-icon">✓</div><p class="eyebrow">Thank you</p><h1>Order received</h1><p>Your order number is <strong>{{ order_number }}</strong>. Keep it for your records.</p><p>We will review and confirm your order shortly.</p><a class="button" href="{% url 'catalog' %}">Continue shopping</a></div>{% endblock %}

@@ -1,0 +1,17 @@
+.venv/
+.env*
+!.env.example
+__pycache__/
+*.py[cod]
+*.sqlite3*
+*.db
+media/
+staticfiles/
+.DS_Store
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+service-account*.json
+.pytest_cache/
