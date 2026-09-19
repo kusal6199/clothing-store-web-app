@@ -108,6 +108,23 @@ class SearchMetadataTests(TestCase):
         self.assertEqual(schema["image"], ["https://store.example/static/catalog/products/tee.jpg"])
 
 
+class ProductVariantPriceTests(TestCase):
+    def test_variant_surcharge_is_shown_and_used_by_cart(self):
+        from .services import cart_rows
+
+        product = Product.objects.create(name="Premium Tee", slug="premium-tee", price=Decimal("1200.00"),
+                                         discount_price=Decimal("1000.00"))
+        variant = ProductVariant.objects.create(product=product, size="XL", stock=3,
+                                                additional_price=Decimal("150.00"))
+        detail = self.client.get(reverse("product_detail", args=[product.slug]))
+        self.assertContains(detail, 'data-base-price="1000.00"')
+        self.assertContains(detail, 'data-additional-price="150.00"')
+        self.client.post(reverse("cart_add"), {"variant_id": variant.pk, "quantity": 2})
+        rows = cart_rows(self.client.session["cart"])
+        self.assertEqual(rows[0]["unit_price"], Decimal("1150.00"))
+        self.assertEqual(rows[0]["line_total"], Decimal("2300.00"))
+
+
 class CheckoutFlowTests(TestCase):
     def setUp(self):
         self.category = Category.objects.create(name="T-Shirts", slug="t-shirts")

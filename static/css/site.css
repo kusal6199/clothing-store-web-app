@@ -8,3 +8,5 @@
 
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .newsletter-section{padding-top:0}.newsletter-card{max-width:850px;margin:auto;padding:55px 45px;border-radius:16px;background:linear-gradient(130deg,var(--green-dark),var(--green));color:#fff;text-align:center}.newsletter-card h2{margin-bottom:12px}.newsletter-card p{max-width:550px;margin:0 auto 26px;color:#e1f0e5}.newsletter-form{display:flex;gap:10px;max-width:510px;margin:0 auto 14px}.newsletter-form input{min-width:0;flex:1;border:1px solid #ffffff66;border-radius:5px;padding:13px 15px;background:#ffffff18;color:#fff}.newsletter-form input::placeholder{color:#e1f0e5}.newsletter-card small{color:#d5e7da}@media(max-width:720px){.newsletter-card{padding:40px 24px}.newsletter-form{flex-direction:column}.newsletter-form .button{width:100%}}
+
+.variant-availability{margin:-4px 0 13px;color:var(--muted);font-size:12px}.product-main-image img{transition:transform .2s ease}@media(hover:hover){.product-main-image:hover img{transform:scale(1.7)}}

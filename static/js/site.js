@@ -40,4 +40,34 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-image]').forEach((button) => button.addEventListener('click', () => {
     if (mainImage) mainImage.src = button.dataset.image;
   }));
+  if (mainImage) {
+    const frame = mainImage.closest('.product-main-image');
+    frame.addEventListener('mousemove', (event) => {
+      const bounds = frame.getBoundingClientRect();
+      mainImage.style.transformOrigin = `${((event.clientX - bounds.left) / bounds.width) * 100}% ${((event.clientY - bounds.top) / bounds.height) * 100}%`;
+    });
+  }
+  const optionsForm = document.querySelector('[data-product-options]');
+  if (optionsForm) {
+    const select = optionsForm.querySelector('#variant');
+    const quantity = optionsForm.querySelector('#quantity');
+    const displayPrice = document.querySelector('[data-product-display-price]');
+    const addPrice = optionsForm.querySelector('[data-add-price]');
+    const availability = optionsForm.querySelector('[data-variant-availability]');
+    const formatter = new Intl.NumberFormat('en-NP', { maximumFractionDigits: 2 });
+    const updateVariant = () => {
+      const selected = select.selectedOptions[0];
+      const surcharge = Number(selected?.dataset.additionalPrice || 0);
+      const stock = Number(selected?.dataset.stock || 0);
+      const price = `Rs ${formatter.format(Number(optionsForm.dataset.basePrice) + surcharge)}`;
+      if (displayPrice) displayPrice.textContent = price;
+      if (addPrice) addPrice.textContent = price;
+      if (availability) availability.textContent = selected?.value ? `${stock} in stock` : 'Select an option to see availability.';
+      if (quantity && selected?.value) {
+        quantity.max = Math.min(stock, 99);
+        if (Number(quantity.value) > stock) quantity.value = Math.min(stock, 99);
+      }
+    };
+    select.addEventListener('change', updateVariant);
+  }
 });
