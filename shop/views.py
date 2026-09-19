@@ -279,18 +279,36 @@ def loyalty_options(request):
     return JsonResponse({"rewards": rewards})
 
 def review_by_token(request, token):
-    review = get_object_or_404(Review.objects.select_related("product"), review_token=token, used_at__isnull=True)
-    form = ReviewForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        from django.utils import timezone
-        review.rating = form.cleaned_data["rating"]
-        review.comment = form.cleaned_data["comment"]
-        review.used_at = timezone.now()
-        review.approved = False
-        review.save(update_fields=["rating", "comment", "used_at", "approved"])
-        messages.success(request, "Thank you. Your review is awaiting approval.")
-        return redirect("home")
-    return render(request, "shop/review.html", {"review": review, "form": form})
+    anchor = get_object_or_404(Review.objects.select_related("order"), review_token=token, order__isnull=False)
+    if anchor.order.created_at < timezone.now() - timedelta(days=30):
+        return HttpResponse("This review link has expired.", status=410)
+    reviews = list(Review.objects.filter(order_id=anchor.order_id, product__isnull=False).select_related("product"))
+    target = None
+    if request.method == "POST":
+        target = next((review for review in reviews if review.product_id == request.POST.get("product_id")), None)
+        if target is None:
+            raise Http404
+        if target.used_at:
+            return HttpResponseBadRequest("This product was already reviewed.")
+        form = ReviewForm(request.POST, prefix=target.pk)
+        if form.is_valid():
+            with transaction.atomic():
+                locked = Review.objects.select_for_update().get(pk=target.pk)
+                if locked.used_at:
+                    return HttpResponseBadRequest("This product was already reviewed.")
+                locked.rating = form.cleaned_data["rating"]
+                locked.comment = form.cleaned_data["comment"]
+                locked.name = form.cleaned_data["name"] or anchor.order.customer_name[:80]
+                locked.used_at = timezone.now()
+                locked.approved = False
+                locked.save(update_fields=["rating", "comment", "name", "used_at", "approved"])
+            messages.success(request, "Review submitted. It will appear after approval.")
+            return redirect("review_by_token", token=token)
+    cards = [{"review": review,
+              "form": form if target and target.pk == review.pk else ReviewForm(prefix=review.pk, initial={"name": anchor.order.customer_name[:80]})}
+             for review in reviews]
+    return render(request, "shop/review.html", {"order": anchor.order, "cards": cards,
+        "all_done": bool(reviews) and all(review.used_at for review in reviews)})
 
 
 @staff_member_required

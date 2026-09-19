@@ -81,7 +81,7 @@ Set SMTP details and `SITE_URL` as shown in `.env.example`, then schedule this c
 .venv/bin/python manage.py send_review_requests
 ```
 
-It sends one email for each eligible paid order placed 2–3 days earlier, with a review link for each product. Development defaults to the console email backend.
+It sends one email for each eligible paid order placed 2–3 days earlier. The single link opens a page where the customer can review each distinct product separately for 30 days. Reviews still require admin approval. Development defaults to the console email backend.
 
 ## Side-by-side approach
 

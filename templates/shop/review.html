@@ -1,3 +1,34 @@
 {% extends 'shop/base.html' %}
-{% block title %}Leave a Review{% endblock %}
-{% block content %}<div class="container page-content narrow"><p class="eyebrow">Your feedback matters</p><h1>Review {{ review.product.name|default:'your purchase' }}</h1><form method="post" class="contact-form">{% csrf_token %}{% for field in form %}<div class="form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}<button class="button" type="submit">Submit review</button></form></div>{% endblock %}
+{% block title %}Review Your Order{% endblock %}
+{% block content %}
+<div class="container page-content narrow review-order">
+  {% if all_done %}
+    <div class="empty-state"><h1>Thank you for your feedback!</h1><p>Your reviews will appear after approval.</p><a class="button" href="{% url 'catalog' %}">Continue shopping</a></div>
+  {% else %}
+    <p class="eyebrow">Your feedback matters</p>
+    <h1>How was your order?</h1>
+    <p>Order {{ order.order_number }} · Hi, {{ order.customer_name }}! Your feedback helps other shoppers.</p>
+    {% for card in cards %}
+      <section class="review-card">
+        <div class="review-product">
+          {% if card.review.product.primary_image %}<img src="{{ card.review.product.primary_image }}" alt="{{ card.review.product.name }}">{% endif %}
+          <h2>{{ card.review.product.name }}</h2>
+        </div>
+        {% if card.review.used_at %}
+          <p class="review-done">✓ Review submitted</p>
+        {% else %}
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="product_id" value="{{ card.review.product_id }}">
+            {% for field in card.form %}
+              <div class="form-field"><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>{{ field }}{% if field.errors %}<small class="field-error">{{ field.errors|striptags }}</small>{% endif %}</div>
+            {% endfor %}
+            <p class="review-note">Your display name and approved review will be public.</p>
+            <button class="button" type="submit">Submit review</button>
+          </form>
+        {% endif %}
+      </section>
+    {% endfor %}
+  {% endif %}
+</div>
+{% endblock %}

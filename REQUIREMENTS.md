@@ -29,7 +29,7 @@ Updated: 2026-09-19. This is a **source-derived working checklist**, not a forma
 | Checkout with customer/delivery fields, delivery-zone charges, server-side prices, promo discounts, loyalty item | Partial | Delivery and promo previews now update the summary; server recalculates final charges. Browser interaction and loyalty presentation still need comparison. |
 | QR/manual payment instructions and order success | Partial | QR display and pending order creation work. Screenshot upload and richer confirmation flow are pending; live payment is deferred. |
 | Contact form and editable contact details | Implemented | Check appearance and notification needs. |
-| Token-based product reviews, approval, and review request emails | Partial | Review form, admin approval, and email command work; final email scheduling and exact multi-product experience need QA. |
+| Token-based product reviews, approval, and review request emails | Partial | One email now opens all products in an order, with separate moderated reviews and 30-day expiry. Schedule the command and run browser/email delivery QA for deployment. |
 | SEO title/description, sitemap, robots, canonical URLs, Open Graph, structured data | Implemented | Canonical and social metadata plus home/product JSON-LD render from `SITE_URL`; verify production domain and crawl results during deployment. |
 | Newsletter section | Implemented | The original only showed a success toast. Django now renders the configurable section and stores validated subscriber addresses locally for staff management. Marketing email delivery remains a future decision. |
 | Smooth animations, loading feedback, accessible responsive details | Partial | Basic CSS/JS exists; compare with original and improve where important. |
@@ -59,7 +59,7 @@ Updated: 2026-09-19. This is a **source-derived working checklist**, not a forma
 | Separate Supabase PostgreSQL database | Pending | User must create/provide a new project and connection string; then run Django migrations and public import. |
 | Supabase Storage | Partial | Server-side upload code exists; new bucket and server-only key are not configured. Existing local media need migration for remote deployment. |
 | Existing operational data migration | Pending | Fresh source export and mapping at cutover; dummy/test order records were intentionally excluded from local DB. |
-| Development tests and route rendering | Partial | `manage.py check` and 16 tests pass, including fixture loading, catalog filters, newsletter signup, SEO metadata, variant prices, checkout totals, staff dashboard analytics, grouped settings, and local product media; test more admin and error flows as parity work continues. |
+| Development tests and route rendering | Partial | `manage.py check` and 17 tests pass, including fixture loading, catalog filters, newsletter signup, SEO metadata, variant prices, checkout totals, staff dashboard analytics, grouped settings, local product media, and multi-product reviews; test more admin and error flows as parity work continues. |
 | Browser visual comparison | Pending | No browser surface was available in this session either; compare desktop/mobile views and interactions against Next.js when one is available. |
 | Production deployment and domain switch | Pending | Configure Django host, HTTPS, persistent assets, background scheduling, backups, and monitoring after client approval. |
 | Live eSewa/payment launch | Deferred | User said payments are tests and not live yet. |

@@ -310,3 +310,46 @@ class ReviewEmailTests(TestCase):
             call_command("send_review_requests")
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(Review.objects.filter(order=order).count(), 1)
+
+    def test_one_link_reviews_all_products_once_and_expires(self):
+        from datetime import timedelta
+        from django.core import mail
+        from django.core.management import call_command
+        from django.test import override_settings
+        from django.utils import timezone
+        from .models import Review
+
+        first = Product.objects.create(name="Tee", slug="review-tee", price=Decimal("500.00"))
+        second = Product.objects.create(name="Hoodie", slug="review-hoodie", price=Decimal("900.00"))
+        order = Order.objects.create(order_number="CS-MULTI-REVIEW", customer_name="Reviewer", phone="9800000000",
+                                     email="reviewer@example.com", delivery_address="Address", payment_status="paid")
+        for product in (first, second, first):
+            OrderItem.objects.create(order=order, product=product, product_name=product.name, size="M",
+                                     price=product.price, quantity=1)
+        Order.objects.filter(pk=order.pk).update(created_at=timezone.now() - timedelta(days=2, hours=12))
+        with override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend", SITE_URL="https://store.example"):
+            call_command("send_review_requests")
+            call_command("send_review_requests")
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].body.count("https://store.example/review/"), 1)
+        self.assertEqual(Review.objects.filter(order=order).count(), 2)
+        master = Review.objects.filter(order=order).first()
+        url = reverse("review_by_token", args=[master.review_token])
+        page = self.client.get(url)
+        self.assertContains(page, first.name)
+        self.assertContains(page, second.name)
+        other = Review.objects.get(order=order, product=second)
+        submission = {"product_id": second.pk, f"{other.pk}-rating": "4",
+                      f"{other.pk}-comment": "A comfortable hoodie.", f"{other.pk}-name": "Happy Shopper"}
+        self.assertEqual(self.client.post(url, submission).status_code, 302)
+        other.refresh_from_db()
+        self.assertIsNotNone(other.used_at)
+        self.assertEqual(other.name, "Happy Shopper")
+        self.assertFalse(other.approved)
+        self.assertEqual(self.client.post(url, submission).status_code, 400)
+        remaining = Review.objects.get(order=order, product=first)
+        self.assertEqual(self.client.post(url, {"product_id": first.pk, f"{remaining.pk}-rating": "5",
+                                                f"{remaining.pk}-comment": "A very good everyday tee."}).status_code, 302)
+        self.assertContains(self.client.get(url), "Thank you for your feedback!")
+        Order.objects.filter(pk=order.pk).update(created_at=timezone.now() - timedelta(days=31))
+        self.assertEqual(self.client.get(url).status_code, 410)

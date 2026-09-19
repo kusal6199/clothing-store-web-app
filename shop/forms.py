@@ -64,4 +64,5 @@ class CheckoutForm(forms.Form):
 
 class ReviewForm(forms.Form):
     rating = forms.IntegerField(min_value=1, max_value=5, widget=forms.Select(choices=[(n, f"{n} stars") for n in range(5, 0, -1)]))
-    comment = forms.CharField(widget=forms.Textarea(attrs={"rows": 5}))
+    comment = forms.CharField(min_length=10, max_length=2000, widget=forms.Textarea(attrs={"rows": 4}))
+    name = forms.CharField(max_length=80, required=False, label="Display name")
