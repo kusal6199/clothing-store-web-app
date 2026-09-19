@@ -71,6 +71,8 @@ SUPABASE_STORAGE_BUCKET=store-media
 
 New product, category, and hero images uploaded in Django admin will go to that bucket. Never put the service role key in browser code. Existing images in `media/uploads/` continue to use local URLs, so copy them to a persistent media location or migrate their URLs before deploying without local media.
 
+The product editor has separate upload fields for main product photos and detail gallery photos. Each save can append one image to each list; repeat to add more. Local uploads stay under the ignored `media/` directory.
+
 ## Review emails
 
 Set SMTP details and `SITE_URL` as shown in `.env.example`, then schedule this command once daily:

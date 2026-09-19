@@ -183,6 +183,38 @@ class StoreSettingsTests(TestCase):
         self.assertContains(self.client.get(reverse("checkout")), 'data-inside-charge="125"')
 
 
+class AdminMediaTests(TestCase):
+    def test_product_admin_saves_main_and_gallery_uploads_locally(self):
+        from io import BytesIO
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from django.contrib import admin
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from django.test import override_settings
+        from PIL import Image
+        from .admin import ProductAdmin
+        from .admin_forms import ProductAdminForm
+
+        output = BytesIO()
+        Image.new("RGB", (4, 4), color="green").save(output, format="PNG")
+        image_bytes = output.getvalue()
+        with TemporaryDirectory() as directory, override_settings(
+            MEDIA_ROOT=Path(directory), MEDIA_URL="/uploads/", SUPABASE_URL="", SUPABASE_SERVICE_ROLE_KEY=""
+        ):
+            form = ProductAdminForm(data={"name": "Media Tee", "slug": "media-tee", "price": "500.00"}, files={
+                "image_upload": SimpleUploadedFile("main.png", image_bytes, content_type="image/png"),
+                "gallery_upload": SimpleUploadedFile("detail.png", image_bytes, content_type="image/png"),
+            })
+            self.assertTrue(form.is_valid(), form.errors)
+            ProductAdmin(Product, admin.site).save_model(None, form.save(commit=False), form, False)
+            product = Product.objects.get(slug="media-tee")
+            self.assertEqual(len(product.images), 1)
+            self.assertEqual(len(product.gallery_images), 1)
+            for url in [*product.images, *product.gallery_images]:
+                self.assertTrue(url.startswith("/uploads/products/"))
+                self.assertTrue((Path(directory) / url.removeprefix("/uploads/")).is_file())
+
+
 class CheckoutFlowTests(TestCase):
     def setUp(self):
         self.category = Category.objects.create(name="T-Shirts", slug="t-shirts")

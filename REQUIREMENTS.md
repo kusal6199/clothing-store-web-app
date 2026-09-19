@@ -41,7 +41,7 @@ Updated: 2026-09-19. This is a **source-derived working checklist**, not a forma
 | Admin login and account management | Implemented | Uses Django users/admin; create a new superuser locally. Original credentials were not copied. |
 | Overview counts: products, orders, paid revenue, messages, visitors, customers | Partial | `/dashboard/` now has counts, a 14-day order chart with daily paid revenue, top products from paid orders, and linked recent orders; visual/admin workflow comparison remains. |
 | Product, variant stock, category, collection, tag CRUD | Implemented | Managed through Django admin; compare validation and ease of use with original custom UI. |
-| Image upload for products, categories, hero slides | Partial | Admin upload fields work with local media or configured Supabase Storage. Multi-image workflow and production media migration need QA. |
+| Image upload for products, categories, hero slides | Partial | Product admin now appends separate main and gallery photos; local storage is tested. Category/hero uploads and configured Supabase Storage still need end-to-end QA, plus production media migration. |
 | Homepage content, visibility, titles, hero and promo management | Partial | Models are editable in Django admin; image preview/editor convenience still needs comparison. The source has no section reorder control. |
 | Orders: list/search/filter/detail/status, mark paid, stock/loyalty transition, CSV export | Partial | Django admin covers these; compare cancellation/refund rules, status workflow, and original custom UI. Payments remain test-only. |
 | Promo codes: validation, limits, percentage discount, attribution | Partial | Code validation, usage limit, and admin CRUD exist. Influencer commission reports are pending. |
@@ -59,7 +59,7 @@ Updated: 2026-09-19. This is a **source-derived working checklist**, not a forma
 | Separate Supabase PostgreSQL database | Pending | User must create/provide a new project and connection string; then run Django migrations and public import. |
 | Supabase Storage | Partial | Server-side upload code exists; new bucket and server-only key are not configured. Existing local media need migration for remote deployment. |
 | Existing operational data migration | Pending | Fresh source export and mapping at cutover; dummy/test order records were intentionally excluded from local DB. |
-| Development tests and route rendering | Partial | `manage.py check` and 15 tests pass, including fixture loading, catalog filters, newsletter signup, SEO metadata, variant prices, checkout totals, staff dashboard analytics, and grouped settings; test more admin, media, and error flows as parity work continues. |
+| Development tests and route rendering | Partial | `manage.py check` and 16 tests pass, including fixture loading, catalog filters, newsletter signup, SEO metadata, variant prices, checkout totals, staff dashboard analytics, grouped settings, and local product media; test more admin and error flows as parity work continues. |
 | Browser visual comparison | Pending | No browser surface was available in this session either; compare desktop/mobile views and interactions against Next.js when one is available. |
 | Production deployment and domain switch | Pending | Configure Django host, HTTPS, persistent assets, background scheduling, backups, and monitoring after client approval. |
 | Live eSewa/payment launch | Deferred | User said payments are tests and not live yet. |

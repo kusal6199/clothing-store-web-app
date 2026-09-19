@@ -4,7 +4,8 @@ from .models import Category, HeroSlide, Product
 
 
 class ProductAdminForm(forms.ModelForm):
-    image_upload = forms.ImageField(required=False, help_text="Optional. Upload an image; its URL is added to the product gallery.")
+    image_upload = forms.ImageField(required=False, help_text="Optional. Add a main product image.")
+    gallery_upload = forms.ImageField(required=False, help_text="Optional. Add a detail gallery image.")
 
     class Meta:
         model = Product
