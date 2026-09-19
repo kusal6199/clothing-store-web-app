@@ -1,0 +1,15 @@
+<section class="newsletter-section section" id="newsletter">
+  <div class="container">
+    <div class="newsletter-card">
+      <h2>{% firstof sections.newsletter.title site_settings.newsletter_title "Stay in Style" %}</h2>
+      <p>{% firstof sections.newsletter.subtitle site_settings.newsletter_subtitle "Get new arrivals and store updates by email." %}</p>
+      <form method="post" action="{% url 'newsletter_subscribe' %}" class="newsletter-form">
+        {% csrf_token %}
+        <label class="sr-only" for="newsletter-email">Email address</label>
+        <input id="newsletter-email" type="email" name="email" placeholder="you@example.com" autocomplete="email" maxlength="254" required>
+        <button class="button button-light" type="submit">Subscribe</button>
+      </form>
+      <small>We will use your email for store updates.</small>
+    </div>
+  </div>
+</section>

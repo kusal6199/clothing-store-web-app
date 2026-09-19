@@ -1,7 +1,7 @@
 from decimal import Decimal
 from django.test import TestCase
 from django.urls import reverse
-from .models import Category, LoyaltyProgress, Order, Product, ProductVariant, PromoCode, Setting
+from .models import Category, HomepageSection, LoyaltyProgress, NewsletterSubscriber, Order, Product, ProductVariant, PromoCode, Setting
 from .services import confirm_order_paid
 
 
@@ -44,6 +44,34 @@ class CatalogFilterTests(TestCase):
         self.assertEqual(unmatched.context["page"].paginator.count, 0)
         matched = self.client.get(reverse("catalog"), {"size": "M", "color": "Blue"})
         self.assertEqual(matched.context["page"].paginator.count, 1)
+
+
+class NewsletterTests(TestCase):
+    def setUp(self):
+        self.section = HomepageSection.objects.create(key="newsletter", title="Stay in Style")
+
+    def test_visible_section_saves_valid_email_once_and_can_reactivate(self):
+        self.assertContains(self.client.get(reverse("home")), 'action="/newsletter/subscribe/"')
+        response = self.client.post(reverse("newsletter_subscribe"), {"email": " Shopper@Example.com "})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, "/#newsletter")
+        subscriber = NewsletterSubscriber.objects.get()
+        self.assertEqual(subscriber.email, "shopper@example.com")
+        subscriber.active = False
+        subscriber.save()
+        self.client.post(reverse("newsletter_subscribe"), {"email": "shopper@example.com"})
+        self.assertEqual(NewsletterSubscriber.objects.count(), 1)
+        subscriber.refresh_from_db()
+        self.assertTrue(subscriber.active)
+
+    def test_invalid_email_and_hidden_section_do_not_collect_addresses(self):
+        self.client.post(reverse("newsletter_subscribe"), {"email": "invalid"})
+        self.assertEqual(NewsletterSubscriber.objects.count(), 0)
+        self.section.visible = False
+        self.section.save()
+        self.assertNotContains(self.client.get(reverse("home")), 'action="/newsletter/subscribe/"')
+        self.assertEqual(self.client.post(reverse("newsletter_subscribe"), {"email": "valid@example.com"}).status_code, 404)
+        self.assertEqual(NewsletterSubscriber.objects.count(), 0)
 
 
 class CheckoutFlowTests(TestCase):

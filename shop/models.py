@@ -309,6 +309,22 @@ class Setting(models.Model):
         return self.key
 
 
+class NewsletterSubscriber(Timestamped):
+    id = models.CharField(primary_key=True, max_length=32, default=new_id, editable=False)
+    email = models.EmailField(max_length=254, unique=True)
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.email
+
+    def save(self, *args, **kwargs):
+        self.email = self.email.strip().lower()
+        super().save(*args, **kwargs)
+
+
 class Visitor(models.Model):
     id = models.CharField(primary_key=True, max_length=32, default=new_id, editable=False)
     ip = models.GenericIPAddressField(null=True, blank=True)

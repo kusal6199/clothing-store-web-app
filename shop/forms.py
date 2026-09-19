@@ -15,6 +15,13 @@ class ContactForm(forms.ModelForm):
         return data
 
 
+class NewsletterForm(forms.Form):
+    email = forms.EmailField(max_length=254)
+
+    def clean_email(self):
+        return self.cleaned_data["email"].strip().lower()
+
+
 class CheckoutForm(forms.Form):
     customer_name = forms.CharField(max_length=160, label="Full name")
     phone = forms.CharField(max_length=40)

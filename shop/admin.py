@@ -7,7 +7,7 @@ from .admin_forms import ProductAdminForm, CategoryAdminForm, HeroSlideAdminForm
 from .storage import save_image
 from .models import (
     Category, Collection, HeroSlide, HomepageSection, LoyaltyProgress,
-    Message, Order, OrderItem, Product, ProductVariant, PromoBanner,
+    Message, NewsletterSubscriber, Order, OrderItem, Product, ProductVariant, PromoBanner,
     PromoCode, Review, Setting, Tag, Visitor,
 )
 
@@ -131,6 +131,15 @@ class MessageAdmin(admin.ModelAdmin):
     list_display = ("name", "email", "phone", "is_read", "created_at")
     list_filter = ("is_read",)
     list_editable = ("is_read",)
+
+
+@admin.register(NewsletterSubscriber)
+class NewsletterSubscriberAdmin(admin.ModelAdmin):
+    list_display = ("email", "active", "created_at")
+    list_filter = ("active", "created_at")
+    list_editable = ("active",)
+    search_fields = ("email",)
+    readonly_fields = ("created_at", "updated_at")
 
 
 @admin.register(HeroSlide)

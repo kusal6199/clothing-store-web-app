@@ -31,7 +31,7 @@ Updated: 2026-09-19. This is a **source-derived working checklist**, not a forma
 | Contact form and editable contact details | Implemented | Check appearance and notification needs. |
 | Token-based product reviews, approval, and review request emails | Partial | Review form, admin approval, and email command work; final email scheduling and exact multi-product experience need QA. |
 | SEO title/description, sitemap, robots, canonical URLs, Open Graph, structured data | Partial | Titles, basic description, sitemap, and robots exist. Canonical, Open Graph, and structured data are pending. |
-| Newsletter section | Pending | Determine whether the original has a functional subscription or display-only UI; then match it. |
+| Newsletter section | Implemented | The original only showed a success toast. Django now renders the configurable section and stores validated subscriber addresses locally for staff management. Marketing email delivery remains a future decision. |
 | Smooth animations, loading feedback, accessible responsive details | Partial | Basic CSS/JS exists; compare with original and improve where important. |
 
 ## Store management
@@ -59,7 +59,7 @@ Updated: 2026-09-19. This is a **source-derived working checklist**, not a forma
 | Separate Supabase PostgreSQL database | Pending | User must create/provide a new project and connection string; then run Django migrations and public import. |
 | Supabase Storage | Partial | Server-side upload code exists; new bucket and server-only key are not configured. Existing local media need migration for remote deployment. |
 | Existing operational data migration | Pending | Fresh source export and mapping at cutover; dummy/test order records were intentionally excluded from local DB. |
-| Development tests and route rendering | Partial | `manage.py check` and 7 tests pass, including fresh fixture loading and catalog filter/pagination cases; test more admin, media, and error flows as parity work continues. |
+| Development tests and route rendering | Partial | `manage.py check` and 9 tests pass, including fixture loading, catalog filters, and newsletter signup; test more admin, media, and error flows as parity work continues. |
 | Browser visual comparison | Pending | Previous session had no browser surface; compare desktop/mobile views against Next.js. |
 | Production deployment and domain switch | Pending | Configure Django host, HTTPS, persistent assets, background scheduling, backups, and monitoring after client approval. |
 | Live eSewa/payment launch | Deferred | User said payments are tests and not live yet. |

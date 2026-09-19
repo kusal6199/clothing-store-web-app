@@ -11,6 +11,7 @@ urlpatterns = [
     path("checkout/", views.checkout, name="checkout"),
     path("checkout/success/<str:order_number>/", views.order_success, name="order_success"),
     path("contact/", views.contact, name="contact"),
+    path("newsletter/subscribe/", views.newsletter_subscribe, name="newsletter_subscribe"),
     path("promo/validate/", views.promo_validate, name="promo_validate"),
     path("loyalty/options/", views.loyalty_options, name="loyalty_options"),
     path("review/<str:token>/", views.review_by_token, name="review_by_token"),

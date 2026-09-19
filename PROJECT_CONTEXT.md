@@ -32,6 +32,7 @@ The original is a Next.js/React/TypeScript storefront and custom admin. Its curr
 - Four Django tests passed for checkout, promo pricing, loyalty accounting, and review email deduplication.
 - A fifth test now loads the public fixture into a fresh test database and checks that the storefront and packaged images render. All five tests pass.
 - Catalog filter work after the first push: pagination now preserves active search and filter parameters; applying sidebar filters retains a homepage merchandising filter; size and colour must match the same stocked variant. Two focused tests cover these cases, bringing the suite to seven passing tests.
+- The source newsletter was a display-only form that showed success without storing an address. Django now renders the configurable section on the homepage, validates and stores unique normalized addresses locally, allows staff to deactivate/reactivate them in admin, and never exports them in the public fixture. Two tests cover signup, validation, repeat signup, and hidden-section behavior. Nine tests pass after migration `0003_newslettersubscriber`.
 - Django test client rendered the homepage, catalog, product, cart, checkout, contact, sitemap, admin login, and loyalty lookup successfully.
 - Browser visual QA could not be performed because no browser surface was available in that session. The visual design still needs comparison against the original site.
 - The original `Jersey-main` Git working tree was clean after creating this separate project.

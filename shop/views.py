@@ -5,10 +5,11 @@ from django.core.paginator import Paginator
 from django.db.models import Count, Q, Sum
 from django.http import Http404, HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
-from .forms import CheckoutForm, ContactForm, ReviewForm
+from .forms import CheckoutForm, ContactForm, NewsletterForm, ReviewForm
 from .models import (
-    Category, Collection, HeroSlide, HomepageSection, Message, Order,
+    Category, Collection, HeroSlide, HomepageSection, Message, NewsletterSubscriber, Order,
     Product, ProductVariant, PromoBanner, Review, Tag, Visitor, LoyaltyProgress,
 )
 from .services import InsufficientStock, InvalidPromo, cart_rows, create_order, promo_for, store_settings
@@ -187,6 +188,22 @@ def contact(request):
         messages.success(request, "Thanks! Your message has been sent.")
         return redirect("contact")
     return render(request, "shop/contact.html", {"form": form})
+
+
+@require_POST
+def newsletter_subscribe(request):
+    if not HomepageSection.objects.filter(key="newsletter", visible=True).exists():
+        raise Http404
+    form = NewsletterForm(request.POST)
+    if form.is_valid():
+        subscriber, created = NewsletterSubscriber.objects.get_or_create(email=form.cleaned_data["email"])
+        if not created and not subscriber.active:
+            subscriber.active = True
+            subscriber.save(update_fields=["active", "updated_at"])
+        messages.success(request, "You're on the list for store updates.")
+    else:
+        messages.error(request, "Enter a valid email address to subscribe.")
+    return redirect(reverse("home") + "#newsletter")
 
 
 def promo_validate(request):
