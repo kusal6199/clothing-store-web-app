@@ -1,7 +1,7 @@
 from decimal import Decimal
 from django.test import TestCase
 from django.urls import reverse
-from .models import Category, HomepageSection, LoyaltyProgress, NewsletterSubscriber, Order, Product, ProductVariant, PromoCode, Setting
+from .models import Category, HomepageSection, LoyaltyProgress, NewsletterSubscriber, Order, OrderItem, Product, ProductVariant, PromoCode, Setting
 from .services import confirm_order_paid
 
 
@@ -123,6 +123,38 @@ class ProductVariantPriceTests(TestCase):
         rows = cart_rows(self.client.session["cart"])
         self.assertEqual(rows[0]["unit_price"], Decimal("1150.00"))
         self.assertEqual(rows[0]["line_total"], Decimal("2300.00"))
+
+
+class DashboardAnalyticsTests(TestCase):
+    def test_staff_dashboard_counts_daily_orders_and_paid_product_sales(self):
+        from datetime import timedelta
+        from django.contrib.auth import get_user_model
+        from django.utils import timezone
+
+        paid = Order.objects.create(order_number="PAID-TODAY", customer_name="A", phone="9800000000",
+                                    delivery_address="Address", total=Decimal("500.00"), payment_status="paid")
+        pending = Order.objects.create(order_number="PENDING-TODAY", customer_name="B", phone="9800000001",
+                                       delivery_address="Address", total=Decimal("1000.00"))
+        older = Order.objects.create(order_number="PAID-YESTERDAY", customer_name="C", phone="9800000002",
+                                     delivery_address="Address", total=Decimal("300.00"), payment_status="paid")
+        Order.objects.filter(pk=older.pk).update(created_at=timezone.now() - timedelta(days=1))
+        OrderItem.objects.create(order=paid, product_name="Tee", size="M", price=Decimal("250.00"), quantity=2)
+        OrderItem.objects.create(order=older, product_name="Tee", size="M", price=Decimal("300.00"), quantity=1)
+        OrderItem.objects.create(order=pending, product_name="Tee", size="M", price=Decimal("100.00"), quantity=10)
+        OrderItem.objects.create(order=paid, product_name="Reward", size="M", price=Decimal("0.00"), quantity=1,
+                                 is_reward_item=True)
+        self.assertEqual(self.client.get(reverse("dashboard")).status_code, 302)
+        staff = get_user_model().objects.create_user(username="staff", password="test-password", is_staff=True)
+        self.client.force_login(staff)
+        response = self.client.get(reverse("dashboard"))
+        self.assertEqual(response.status_code, 200)
+        days = response.context["orders_by_day"]
+        self.assertEqual(len(days), 14)
+        self.assertEqual(days[-1]["count"], 2)
+        self.assertEqual(days[-1]["revenue"], Decimal("500.00"))
+        self.assertEqual(days[-2]["count"], 1)
+        self.assertEqual(response.context["top_products"][0]["quantity"], 3)
+        self.assertContains(response, "View daily figures")
 
 
 class CheckoutFlowTests(TestCase):
