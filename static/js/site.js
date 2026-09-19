@@ -70,4 +70,69 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     select.addEventListener('change', updateVariant);
   }
+  const checkoutForm = document.querySelector('#checkout-form');
+  const summary = document.querySelector('[data-checkout-summary]');
+  if (checkoutForm && summary) {
+    const promoInput = checkoutForm.querySelector('#id_promo_code');
+    const applyPromo = checkoutForm.querySelector('[data-apply-promo]');
+    const feedback = checkoutForm.querySelector('[data-promo-feedback]');
+    const discountRow = summary.querySelector('[data-discount-row]');
+    const discountDisplay = summary.querySelector('[data-discount]');
+    const deliveryDisplay = summary.querySelector('[data-delivery]');
+    const deliveryZone = summary.querySelector('[data-delivery-zone]');
+    const totalDisplay = summary.querySelector('[data-total]');
+    const toCents = (value) => Math.round(Number(value || 0) * 100);
+    const format = (cents) => `Rs ${new Intl.NumberFormat('en-NP', { maximumFractionDigits: 2 }).format(cents / 100)}`;
+    const subtotal = toCents(summary.dataset.subtotal);
+    let discount = 0;
+    let appliedCode = '';
+    const updateSummary = () => {
+      const zone = checkoutForm.querySelector('input[name="delivery_zone"]:checked')?.value === 'outside' ? 'outside' : 'inside';
+      const charge = toCents(zone === 'outside' ? summary.dataset.outsideCharge : summary.dataset.insideCharge);
+      deliveryZone.textContent = `${zone} valley`;
+      deliveryDisplay.textContent = format(charge);
+      discountDisplay.textContent = `−${format(discount)}`;
+      discountRow.hidden = discount === 0;
+      totalDisplay.textContent = format(subtotal - discount + charge);
+    };
+    checkoutForm.querySelectorAll('input[name="delivery_zone"]').forEach((input) => input.addEventListener('change', updateSummary));
+    promoInput.addEventListener('input', () => {
+      if (promoInput.value.trim().toUpperCase() !== appliedCode) {
+        discount = 0;
+        appliedCode = '';
+        feedback.textContent = 'Enter a code and select Apply to preview the discount.';
+        updateSummary();
+      }
+    });
+    applyPromo.addEventListener('click', async () => {
+      const code = promoInput.value.trim();
+      if (!code) {
+        feedback.textContent = 'Enter a promo code first.';
+        return;
+      }
+      applyPromo.disabled = true;
+      feedback.textContent = 'Checking promo code…';
+      try {
+        const response = await fetch(applyPromo.dataset.promoUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': checkoutForm.querySelector('[name="csrfmiddlewaretoken"]').value },
+          body: new URLSearchParams({ code }),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.valid) throw new Error(result.reason || 'This promo code is unavailable.');
+        discount = toCents(result.discount);
+        appliedCode = result.code;
+        promoInput.value = result.code;
+        feedback.textContent = `${result.code} applied.`;
+      } catch (error) {
+        discount = 0;
+        appliedCode = '';
+        feedback.textContent = error.message || 'Could not check the promo code.';
+      } finally {
+        applyPromo.disabled = false;
+        updateSummary();
+      }
+    });
+    updateSummary();
+  }
 });

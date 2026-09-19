@@ -198,9 +198,14 @@ def checkout(request):
         form = CheckoutForm(initial={"delivery_zone": "inside"})
     subtotal = sum((row["line_total"] for row in rows), Decimal("0.00"))
     settings = store_settings()
+    inside_charge = settings.get("delivery_inside_valley", "100")
+    outside_charge = settings.get("delivery_outside_valley", "200")
+    selected_zone = "outside" if form["delivery_zone"].value() == "outside" else "inside"
+    initial_delivery = Decimal(outside_charge if selected_zone == "outside" else inside_charge)
     return render(request, "shop/checkout.html", {"form": form, "rows": rows, "subtotal": subtotal,
-        "inside_charge": settings.get("delivery_inside_valley", "100"),
-        "outside_charge": settings.get("delivery_outside_valley", "200"),
+        "inside_charge": inside_charge, "outside_charge": outside_charge,
+        "selected_zone": selected_zone, "initial_delivery": initial_delivery,
+        "initial_total": subtotal + initial_delivery,
         "qr_image": settings.get("qr_image", ""),
         "payment_instructions": settings.get("payment_instructions", "Place your order and follow the shop's payment instructions.")})
 

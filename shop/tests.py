@@ -162,6 +162,24 @@ class CheckoutFlowTests(TestCase):
         promo.refresh_from_db()
         self.assertEqual(promo.current_uses, 1)
 
+    def test_checkout_summary_uses_delivery_zone_and_server_promo_validation(self):
+        Setting.objects.create(key="delivery_outside_valley", value="250")
+        PromoCode.objects.create(code="SAVE10", influencer_name="Test", discount_percent=Decimal("10.00"))
+        self.client.post(reverse("cart_add"), {"variant_id": self.variant.id, "quantity": 1})
+        initial = self.client.get(reverse("checkout"))
+        self.assertContains(initial, 'data-inside-charge="100"')
+        self.assertContains(initial, 'data-outside-charge="250"')
+        self.assertContains(initial, 'data-total>Rs 1300</strong>')
+        self.assertEqual(initial.content.decode().count('name="promo_code"'), 1)
+        promo = self.client.post(reverse("promo_validate"), {"code": "SAVE10"})
+        self.assertEqual(promo.json()["discount"], "120.00")
+        outside = self.client.post(reverse("checkout"), {
+            "customer_name": "Test Customer", "phone": "9800000000", "delivery_address": "Test address",
+            "delivery_zone": "outside", "promo_code": "SAVE10", "email": "",
+        })
+        self.assertEqual(outside.status_code, 302)
+        self.assertEqual(Order.objects.get().total, Decimal("1330.00"))
+
     def test_loyalty_reward_requires_earned_progress_and_is_redeemed_once(self):
         LoyaltyProgress.objects.create(phone="9800000000", category=self.category, purchase_count=10)
         self.client.post(reverse("cart_add"), {"variant_id": self.variant.id, "quantity": 1})
