@@ -1,5 +1,5 @@
 from django import forms
-from .models import Message
+from .models import Message, Order
 
 
 class ContactForm(forms.ModelForm):
@@ -60,6 +60,10 @@ class CheckoutForm(forms.Form):
     delivery_zone = forms.ChoiceField(choices=(("inside", "Inside valley"), ("outside", "Outside valley")), widget=forms.RadioSelect)
     promo_code = forms.CharField(max_length=80, required=False)
     reward_variant_id = forms.CharField(max_length=32, required=False, label="Loyalty reward", widget=forms.Select(choices=[("", "No reward selected")]))
+    payment_method = forms.ChoiceField(choices=Order.PAYMENT_METHOD, initial="manual", required=False, widget=forms.RadioSelect)
+
+    def clean_payment_method(self):
+        return self.cleaned_data["payment_method"] or "manual"
 
 
 class ReviewForm(forms.Form):

@@ -1,0 +1,20 @@
+{% extends 'shop/base.html' %}
+{% block title %}eSewa test payment status{% endblock %}
+{% block content %}
+<div class="container success-state">
+  <p class="eyebrow">eSewa UAT</p>
+  <h1>Payment status</h1>
+  <p>Order <strong>{{ order.order_number }}</strong></p>
+  {% if order.payment_status == 'paid' %}
+    <p>Your test payment was verified with eSewa. Your order is confirmed.</p>
+  {% elif order.order_status == 'cancelled' %}
+    <p>eSewa reported this test payment as cancelled or expired. Your order was cancelled; you can place a new one.</p>
+  {% elif order.esewa_status == 'needs_review' %}
+    <p>eSewa reported a payment, but the shop could not safely confirm this order. Please contact the shop with your order number. Do not pay again.</p>
+  {% else %}
+    <p>The payment is still pending or could not be verified. Do not pay again until its status is clear.</p>
+    <form method="post" action="{% url 'esewa_check' order.esewa_transaction_uuid %}">{% csrf_token %}<button class="button" type="submit">Check payment status</button></form>
+  {% endif %}
+  <a class="button" href="{% url 'catalog' %}">Continue shopping</a>
+</div>
+{% endblock %}

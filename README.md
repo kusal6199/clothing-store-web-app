@@ -6,13 +6,29 @@ A separate Django rebuild of the clothing store in `Jersey-main`. It runs alongs
 
 - Storefront: homepage sections, categories, collections, tags, product search and filters, product details, image gallery, cart, checkout, contact, newsletter signup, reviews, sitemap, and robots.txt.
 - Store management: Django admin for catalog, variants, homepage, reviews, messages, newsletter subscribers, settings, promo codes, orders, and inventory; a custom overview at `/dashboard/` and grouped settings at `/dashboard/settings/`.
-- Checkout: server-side prices, delivery charges, promo discounts, stock checks, pending orders, optional earned loyalty item, and an idempotent admin action to mark an order paid and deduct stock.
+- Checkout: server-side prices, delivery charges, promo discounts, stock checks, pending orders, optional earned loyalty item, manual/QR payment, and eSewa ePay UAT payment with server-side verification. The paid transition updates stock and loyalty once.
 - Media: local images for development. New admin uploads can go to a public Supabase Storage bucket when configured.
 - Scheduled review email command with SMTP configuration.
 
-Payments are intentionally a test/manual workflow. Placing an order does not collect or verify payment, and it does not automatically mark the order paid.
+Payments are test-only. Manual/QR orders stay pending for staff confirmation. eSewa orders use the UAT test wallet and are marked paid only after a matching server-to-server status check. Live payment endpoints are not configurable in this build.
 
 For test orders, staff can use Django admin actions to mark an order paid or cancel an unpaid order. Cancelling an unpaid order releases its promo use and any pending loyalty reward reservation. Paid or refunded orders cannot be cancelled through that action; refunds still require a separate workflow.
+
+The manual admin paid/cancel actions reject eSewa attempts. Staff can use **Check selected eSewa UAT payment statuses** in order admin. eSewa `COMPLETE` confirms the order, `CANCELED`/`NOT_FOUND` cancels it and releases promo use, and pending/ambiguous/unreachable results leave it pending. A completed payment that cannot pass stock or reference checks is flagged `needs_review` for investigation. Do not ask the customer to pay again while the result is uncertain.
+
+## eSewa ePay UAT
+
+Set these in your private `.env`:
+
+```dotenv
+ESEWA_MERCHANT_CODE=EPAYTEST
+ESEWA_SECRET_KEY=YOUR_UAT_SECRET_FROM_ESEWA_DOCS
+SITE_URL=http://127.0.0.1:8000
+```
+
+The merchant code defaults to the public UAT code `EPAYTEST`. `ESEWA_SECRET_KEY` has no default; without it, checkout offers only manual/QR. The payment form posts only to `https://rc-epay.esewa.com.np/api/epay/main/v2/form`, and verification uses `https://rc.esewa.com.np/api/epay/transaction/status/`. These URLs are fixed in code to keep this integration in UAT. Use the current test wallet credentials and published UAT secret from the [official eSewa ePay documentation](https://developer.esewa.com.np/pages/Epay). Do not store wallet credentials in this repository.
+
+For a local browser test, start Django at the same origin as `SITE_URL`, add a product to the cart, choose **eSewa UAT** at checkout, and complete a test wallet payment. eSewa returns the browser to the Django success or failure URL. The result page has **Check payment status** for pending or uncertain responses. The same browser cannot create a second checkout while its eSewa attempt is pending. If the browser never returns, staff can run `manage.py check_esewa_payments` after five minutes (or schedule it periodically); this checks up to 100 old pending attempts per run and never treats a browser redirect as proof of payment. The signed amount is calculated from the stored Django order, including discounts and delivery. Automated tests mock the UAT status API; a real test-wallet transaction needs network access and a test login.
 
 The newsletter form stores email addresses in the local database and lets staff manage them in Django admin. It does not send marketing emails. Subscriber data is excluded from the public fixture and Git repository.
 

@@ -109,3 +109,7 @@ EMAIL_USE_SSL = EMAIL_PORT == 465
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend")
 DEFAULT_FROM_EMAIL = os.getenv("SMTP_FROM", EMAIL_HOST_USER or "noreply@example.com")
 SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000").rstrip("/")
+# eSewa integration is limited to the published UAT endpoints. Set the UAT
+# secret in the server environment to enable the option; there is no live mode.
+ESEWA_MERCHANT_CODE = os.getenv("ESEWA_MERCHANT_CODE", "EPAYTEST")
+ESEWA_SECRET_KEY = os.getenv("ESEWA_SECRET_KEY", "")

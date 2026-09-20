@@ -1,12 +1,12 @@
 # Project handoff for future VS Code / Codex chats
 
-Updated: 2026-09-19
+Updated: 2026-09-20
 
 ## User goal and relationship to the original
 
 The client wants the existing clothing ecommerce project rebuilt as a Django application. The user asked for a separate folder on the Desktop so both versions can be developed and compared side by side. The original project is `/Users/kushalkadel/Desktop/Jersey-main`; this Django project is `/Users/kushalkadel/Desktop/Jersey-Django`. Do not overwrite the original site or point Django migrations at its database.
 
-The original is a Next.js/React/TypeScript storefront and custom admin. Its current source of truth is `prisma/schema.prisma`, `src/app`, `src/components`, and `src/lib` in `Jersey-main`. Its README describes an older jersey version and is partly stale; inspect code and current schema for feature comparisons. The original database URL points to Supabase PostgreSQL. The user explicitly said existing orders and eSewa/payment records are dummy tests and payment work is not a priority.
+The original is a Next.js/React/TypeScript storefront and custom admin. Its current source of truth is `prisma/schema.prisma`, `src/app`, `src/components`, and `src/lib` in `Jersey-main`. Its README describes an older jersey version and is partly stale; inspect code and current schema for feature comparisons. The original database URL points to Supabase PostgreSQL. Existing orders and eSewa/payment records are dummy tests. On 2026-09-20 the user raised eSewa TEST/UAT integration priority; live payments remain deferred.
 
 ## Architecture chosen
 
@@ -45,6 +45,7 @@ The original is a Next.js/React/TypeScript storefront and custom admin. Its curr
 - An external HTML formatter rewrote `home.html` and `dashboard.html` during this milestone and split Django template tags; their render tests failed. The last working committed versions were restored after saving copies in `/private/tmp`, and the full suite passed again. `.prettierignore` now excludes Django templates from Prettier formatting.
 - Unpaid test orders can now be cancelled through a dedicated Django admin action. It releases promo usage and pending loyalty reservations exactly once; paid/refunded orders are rejected. Directly changing an order to cancelled in the admin form is disallowed so staff use the accounting action. A test covers idempotency, promo reuse, reward reservation release, and paid-order rejection. Twenty Django tests pass.
 - Product admin POSTs with blank `images`, `gallery_images`, or `colors` JSON fields now save empty lists; image uploads also append safely if an older record contains null image lists. A full admin POST test creates a product with main/gallery uploads and a variant. `manage.py check` and all 21 Django tests pass. The local development database has an admin account; its credentials and database are not tracked.
+- eSewa ePay UAT is now an optional checkout method when `ESEWA_SECRET_KEY` is set. Django stores the merchant code and unique transaction UUID with a pending order, signs its amount, verifies signed return data, checks eSewa's UAT status API, and uses the existing idempotent paid-order transition. Cancelled/expired status marks payment failed, cancels the order, and releases promo reservations; uncertain results remain pending for the result-page, admin, or five-minute management-command status check. The session prevents a second checkout while an eSewa attempt is pending. Manual/QR checkout remains available. Live endpoints are not enabled. `manage.py check`, migration checks, and all 37 tests pass. Automated tests use synthetic signing keys and mocked status responses; a real UAT wallet transaction has not yet been completed because the browser surface was unavailable.
 - Django test client rendered the homepage, catalog, product, cart, checkout, contact, sitemap, admin login, and loyalty lookup successfully.
 - Browser visual QA could not be performed because no browser surface was available in that session. The visual design still needs comparison against the original site.
 - The original `Jersey-main` Git working tree was clean after creating this separate project.
@@ -55,7 +56,7 @@ The source-derived feature checklist and current status live in `REQUIREMENTS.md
 
 1. Run the two sites side by side and compare every public page and admin workflow for functionality and appearance. Improve the Django templates/CSS where needed.
 2. Create a Django superuser on each new environment with `.venv/bin/python manage.py createsuperuser` when admin access is needed; no default credentials are shipped.
-3. Keep order/payment handling in test scope unless the user changes priorities. Do not enable live eSewa from the original's test integration.
+3. Keep payments in test scope. Run a real eSewa UAT wallet transaction and browser QA when test access is available; do not enable live eSewa.
 4. When the user provides a **new** Supabase project, configure its database and Storage separately, migrate the Django schema there, and import public data with `scripts/import_public_catalog.py`. Do not run Django migrations on the original Prisma database.
 5. Before launch, plan fresh operational-data migration, persistent media URLs, production hosting/HTTPS settings, and end-to-end browser QA.
 

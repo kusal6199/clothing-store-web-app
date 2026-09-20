@@ -156,6 +156,7 @@ class PromoCode(Timestamped):
 class Order(Timestamped):
     STATUS = [(value, value.replace("_", " ").title()) for value in ("pending", "confirmed", "processing", "shipped", "delivered", "cancelled")]
     PAYMENT = [(value, value.title()) for value in ("pending", "paid", "failed", "refunded")]
+    PAYMENT_METHOD = [("manual", "Manual / QR"), ("esewa", "eSewa UAT")]
     id = models.CharField(primary_key=True, max_length=32, default=new_id, editable=False)
     order_number = models.CharField(max_length=50, unique=True)
     customer_name = models.CharField(max_length=160)
@@ -171,8 +172,11 @@ class Order(Timestamped):
     total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     payment_screenshot = models.CharField(max_length=500, blank=True)
     payment_status = models.CharField(max_length=20, choices=PAYMENT, default="pending")
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD, default="manual")
     order_status = models.CharField(max_length=30, choices=STATUS, default="pending")
     esewa_transaction_uuid = models.CharField(max_length=100, null=True, blank=True, unique=True)
+    esewa_product_code = models.CharField(max_length=100, blank=True)
+    esewa_status = models.CharField(max_length=30, blank=True)
     esewa_ref_id = models.CharField(max_length=100, blank=True)
     reward_category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name="reward_orders")
     reward_fulfilled = models.BooleanField(default=False)

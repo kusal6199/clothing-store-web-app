@@ -1,13 +1,13 @@
 # Django rebuild requirements and parity checklist
 
-Updated: 2026-09-19. This is a **source-derived working checklist**, not a formally approved client specification. The user asked for the existing clothing ecommerce project to be rebuilt side by side in Python Django. Compare against the current code in `/Users/kushalkadel/Desktop/Jersey-main`; its README still describes an older jersey version. Record any new client requirements here.
+Updated: 2026-09-20. This is a **source-derived working checklist**, not a formally approved client specification. The user asked for the existing clothing ecommerce project to be rebuilt side by side in Python Django. Compare against the current code in `/Users/kushalkadel/Desktop/Jersey-main`; its README still describes an older jersey version. Record any new client requirements here.
 
 ## Agreed scope and constraints
 
 1. Build a separate Django application at `/Users/kushalkadel/Desktop/Jersey-Django`. Keep the original Next.js project running and unchanged while comparing the two.
 2. The final application should be Django based. Django renders the storefront with templates; browser interactions can use HTML, CSS, and small amounts of JavaScript. Next.js/React do not need to run in the final Django deployment.
 3. Supabase is acceptable for PostgreSQL and optionally Storage. Use a **separate new Supabase project/database** while developing; never run Django migrations against the existing Prisma database.
-4. Existing eSewa, QR, orders, and payment transactions are tests/dummy data. Live payment integration is **deferred by the user**. Do not treat payment launch work as a blocker for store parity.
+4. Existing eSewa, QR, orders, and payment transactions are tests/dummy data. The user requested eSewa ePay **TEST/UAT** integration on 2026-09-20. Live payment integration remains deferred and is not a launch blocker.
 5. Preserve URLs and user journeys where practical. Compare the Django storefront and admin to the original before calling the rebuild complete.
 
 ## Status legend
@@ -27,7 +27,8 @@ Updated: 2026-09-19. This is a **source-derived working checklist**, not a forma
 | Product page with images, size/colour variants, price, stock, material/care text, reviews, related products | Partial | Variant selection now updates displayed price and stock; hover zoom is present. Browser interaction and design comparison remain. |
 | Cart add/update/remove with persistence | Implemented | Django sessions provide persistence; compare browser behavior and test multiple variants. |
 | Checkout with customer/delivery fields, delivery-zone charges, server-side prices, promo discounts, loyalty item | Partial | Delivery and promo previews now update the summary; server recalculates final charges. Browser interaction and loyalty presentation still need comparison. |
-| QR/manual payment instructions and order success | Partial | QR display and pending order creation work. Screenshot upload and richer confirmation flow are pending; live payment is deferred. |
+| QR/manual payment instructions and order success | Partial | QR display and pending order creation work. Screenshot upload and richer confirmation flow are pending. |
+| eSewa ePay UAT checkout and verification | Implemented | Server signs the stored total, verifies the signed return when present and UAT status response, and confirms only matching complete payments. Pending/ambiguous/timeout results remain pending; cancelled/expired attempts release reservations. A real UAT wallet transaction and browser QA remain. Live payments remain deferred. |
 | Contact form and editable contact details | Implemented | Check appearance and notification needs. |
 | Token-based product reviews, approval, and review request emails | Partial | One email now opens all products in an order, with separate moderated reviews and 30-day expiry. Schedule the command and run browser/email delivery QA for deployment. |
 | SEO title/description, sitemap, robots, canonical URLs, Open Graph, structured data | Implemented | Canonical and social metadata plus home/product JSON-LD render from `SITE_URL`; verify production domain and crawl results during deployment. |
@@ -59,10 +60,10 @@ Updated: 2026-09-19. This is a **source-derived working checklist**, not a forma
 | Separate Supabase PostgreSQL database | Pending | User must create/provide a new project and connection string; then run Django migrations and public import. |
 | Supabase Storage | Partial | Server-side upload code exists; new bucket and server-only key are not configured. Existing local media need migration for remote deployment. |
 | Existing operational data migration | Pending | Fresh source export and mapping at cutover; dummy/test order records were intentionally excluded from local DB. |
-| Development tests and route rendering | Partial | `manage.py check` and 21 tests pass, including fixture loading, catalog filters, newsletter signup, SEO metadata, variant prices, checkout totals, staff dashboard analytics, grouped settings, local product media, a full product admin POST, multi-product reviews, and order/promo transitions; test more admin and error flows as parity work continues. |
+| Development tests and route rendering | Partial | `manage.py check` and 37 tests pass, including mocked eSewa signing/status/callback cases, fixture loading, catalog filters, newsletter signup, SEO metadata, variant prices, checkout totals, staff dashboard analytics, grouped settings, local product media, a full product admin POST, multi-product reviews, and order/promo transitions; test more admin and error flows as parity work continues. |
 | Browser visual comparison | Pending | No browser surface was available in this session either; compare desktop/mobile views and interactions against Next.js when one is available. |
 | Production deployment and domain switch | Pending | Configure Django host, HTTPS, persistent assets, background scheduling, backups, and monitoring after client approval. |
-| Live eSewa/payment launch | Deferred | User said payments are tests and not live yet. |
+| Live eSewa/payment launch | Deferred | UAT integration does not configure live eSewa credentials or endpoints. Production onboarding and real transactions remain separate. |
 
 ## How to continue in a new chat
 

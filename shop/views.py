@@ -1,5 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.paginator import Paginator
@@ -10,7 +11,8 @@ from django.http import Http404, HttpResponse, HttpResponseBadRequest, JsonRespo
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
+from . import esewa
 from .forms import CheckoutForm, ContactForm, NewsletterForm, ReviewForm, STORE_SETTING_GROUPS, StoreSettingsForm
 from .models import (
     Category, Collection, HeroSlide, HomepageSection, Message, NewsletterSubscriber, Order, OrderItem,
@@ -184,34 +186,94 @@ def cart_update(request):
 
 
 def checkout(request):
+    pending_uuid = request.session.get("pending_esewa_transaction_uuid")
+    if pending_uuid:
+        previous = Order.objects.filter(esewa_transaction_uuid=pending_uuid, payment_method="esewa").first()
+        if previous and previous.order_status != "cancelled":
+            return redirect("esewa_result", transaction_uuid=pending_uuid)
+        request.session.pop("pending_esewa_transaction_uuid", None)
+        request.session.pop("pending_esewa_cart", None)
     rows = cart_rows(request.session.get("cart", {}))
     if not rows:
         messages.info(request, "Add something to your cart first.")
         return redirect("catalog")
     if request.method == "POST":
         form = CheckoutForm(request.POST)
+        if not esewa.configured():
+            form.fields["payment_method"].choices = [("manual", "Manual / QR")]
         if form.is_valid():
             try:
-                order = create_order(form.cleaned_data, request.session.get("cart", {}))
+                data = dict(form.cleaned_data)
+                if data["payment_method"] == "esewa":
+                    data["esewa_product_code"] = settings.ESEWA_MERCHANT_CODE
+                order = create_order(data, request.session.get("cart", {}))
             except (InsufficientStock, InvalidPromo) as exc:
                 form.add_error(None, str(exc))
             else:
+                if order.payment_method == "esewa":
+                    request.session["pending_esewa_transaction_uuid"] = order.esewa_transaction_uuid
+                    request.session["pending_esewa_cart"] = request.session.get("cart", {}).copy()
+                    return render(request, "shop/esewa_submit.html", {
+                        "order": order, "payment_url": esewa.PAYMENT_URL,
+                        "payment_fields": esewa.payment_fields(order),
+                    })
                 request.session["cart"] = {}
                 return redirect("order_success", order_number=order.order_number)
     else:
         form = CheckoutForm(initial={"delivery_zone": "inside"})
+        if not esewa.configured():
+            form.fields["payment_method"].choices = [("manual", "Manual / QR")]
     subtotal = sum((row["line_total"] for row in rows), Decimal("0.00"))
-    settings = store_settings()
-    inside_charge = settings.get("delivery_inside_valley", "100")
-    outside_charge = settings.get("delivery_outside_valley", "200")
+    shop_settings = store_settings()
+    inside_charge = shop_settings.get("delivery_inside_valley", "100")
+    outside_charge = shop_settings.get("delivery_outside_valley", "200")
     selected_zone = "outside" if form["delivery_zone"].value() == "outside" else "inside"
     initial_delivery = Decimal(outside_charge if selected_zone == "outside" else inside_charge)
     return render(request, "shop/checkout.html", {"form": form, "rows": rows, "subtotal": subtotal,
         "inside_charge": inside_charge, "outside_charge": outside_charge,
         "selected_zone": selected_zone, "initial_delivery": initial_delivery,
         "initial_total": subtotal + initial_delivery,
-        "qr_image": settings.get("qr_image", ""),
-        "payment_instructions": settings.get("payment_instructions", "Place your order and follow the shop's payment instructions.")})
+        "qr_image": shop_settings.get("qr_image", ""),
+        "payment_instructions": shop_settings.get("payment_instructions", "Place your order and follow the shop's payment instructions.")})
+
+
+@require_GET
+def esewa_return(request, outcome, transaction_uuid):
+    order = get_object_or_404(Order, esewa_transaction_uuid=transaction_uuid, payment_method="esewa")
+    encoded = request.GET.get("data")
+    try:
+        if outcome == "success" and not encoded:
+            raise esewa.EsewaVerificationError("Missing signed success response")
+        signed = esewa.verify_return_data(encoded, order) if encoded else None
+        esewa.reconcile(order, signed_return=signed)
+    except esewa.EsewaVerificationError:
+        esewa.set_state(order.pk, "uncertain")
+    return redirect("esewa_result", transaction_uuid=transaction_uuid)
+
+
+@require_GET
+def esewa_result(request, transaction_uuid):
+    order = get_object_or_404(Order, esewa_transaction_uuid=transaction_uuid, payment_method="esewa")
+    if request.session.get("pending_esewa_transaction_uuid") == transaction_uuid:
+        if order.payment_status == "paid":
+            if request.session.get("cart", {}) == request.session.get("pending_esewa_cart", {}):
+                request.session["cart"] = {}
+            request.session.pop("pending_esewa_transaction_uuid", None)
+            request.session.pop("pending_esewa_cart", None)
+        elif order.order_status == "cancelled":
+            request.session.pop("pending_esewa_transaction_uuid", None)
+            request.session.pop("pending_esewa_cart", None)
+    return render(request, "shop/esewa_result.html", {"order": order})
+
+
+@require_POST
+def esewa_check(request, transaction_uuid):
+    order = get_object_or_404(Order, esewa_transaction_uuid=transaction_uuid, payment_method="esewa")
+    try:
+        esewa.reconcile(order)
+    except esewa.EsewaVerificationError:
+        esewa.set_state(order.pk, "uncertain")
+    return redirect("esewa_result", transaction_uuid=transaction_uuid)
 
 
 def order_success(request, order_number):

@@ -121,15 +121,26 @@ def cancel_unpaid(modeladmin, request, queryset):
         modeladmin.message_user(request, f"Cancelled {success} order(s).", level=messages.SUCCESS)
 
 
+@admin.action(description="Check selected eSewa UAT payment statuses")
+def check_esewa(modeladmin, request, queryset):
+    from .esewa import EsewaVerificationError, reconcile
+    for order in queryset.filter(payment_method="esewa"):
+        try:
+            result = reconcile(order)
+        except EsewaVerificationError as exc:
+            result = str(exc)
+        modeladmin.message_user(request, f"{order.order_number}: {result}")
+
+
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     form = OrderAdminForm
-    list_display = ("order_number", "customer_name", "phone", "total", "payment_status", "order_status", "created_at")
-    list_filter = ("payment_status", "order_status", "created_at")
+    list_display = ("order_number", "customer_name", "phone", "total", "payment_method", "payment_status", "esewa_status", "order_status", "created_at")
+    list_filter = ("payment_method", "payment_status", "order_status", "created_at")
     search_fields = ("order_number", "customer_name", "phone")
-    readonly_fields = ("order_number", "subtotal", "discount_amount", "delivery_charge", "total", "payment_status", "reward_fulfilled", "created_at", "updated_at")
+    readonly_fields = ("order_number", "subtotal", "discount_amount", "delivery_charge", "total", "payment_status", "payment_method", "esewa_transaction_uuid", "esewa_product_code", "esewa_status", "esewa_ref_id", "reward_fulfilled", "created_at", "updated_at")
     inlines = [OrderItemInline]
-    actions = [mark_paid, cancel_unpaid, export_orders]
+    actions = [mark_paid, cancel_unpaid, check_esewa, export_orders]
 
 
 @admin.register(PromoCode)

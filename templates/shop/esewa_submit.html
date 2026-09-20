@@ -1,0 +1,14 @@
+{% extends 'shop/base.html' %}
+{% block title %}Continue to eSewa UAT{% endblock %}
+{% block content %}
+<div class="container success-state">
+  <h1>Continue to eSewa test payment</h1>
+  <p>Order <strong>{{ order.order_number }}</strong> totals <strong>Rs {{ order.total }}</strong>. You will pay in eSewa's UAT environment.</p>
+  <form action="{{ payment_url }}" method="post" id="esewa-form">
+    {% for key, value in payment_fields.items %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+    <button class="button" type="submit">Continue to eSewa UAT</button>
+  </form>
+  <p class="note">If you return without completing payment, use the status check on your order page.</p>
+</div>
+<script>document.getElementById('esewa-form').submit();</script>
+{% endblock %}

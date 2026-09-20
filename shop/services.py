@@ -114,6 +114,10 @@ def create_order(form_data, cart):
             delivery_zone=zone, delivery_charge=charge, subtotal=subtotal,
             discount_amount=discount, total=subtotal - discount + charge,
             promo_code=promo, reward_category_id=reward_variant.product.category_id if reward_variant else None,
+            payment_method=form_data.get("payment_method", "manual"),
+            esewa_transaction_uuid=uuid4().hex if form_data.get("payment_method") == "esewa" else None,
+            esewa_product_code=form_data.get("esewa_product_code", "") if form_data.get("payment_method") == "esewa" else "",
+            esewa_status="initiated" if form_data.get("payment_method") == "esewa" else "",
         )
         OrderItem.objects.bulk_create([
             OrderItem(order=order, product=row["product"], product_name=row["product"].name,
@@ -127,10 +131,12 @@ def create_order(form_data, cart):
         return order
 
 
-def confirm_order_paid(order_id):
-    """Idempotently mark a test/manual payment paid, deduct stock, and count loyalty."""
+def confirm_order_paid(order_id, *, verified_esewa=False):
+    """Idempotently mark a payment paid, deduct stock, and count loyalty."""
     with transaction.atomic():
         order = Order.objects.select_for_update().get(pk=order_id)
+        if order.payment_method == "esewa" and not verified_esewa:
+            raise InvalidOrderTransition("eSewa orders require server-side verification.")
         if order.order_status == "cancelled" or order.payment_status == "refunded":
             raise InvalidOrderTransition("Cancelled or refunded orders cannot be marked paid.")
         if order.payment_status == "paid":
@@ -166,10 +172,12 @@ def confirm_order_paid(order_id):
         return order
 
 
-def cancel_pending_order(order_id):
+def cancel_pending_order(order_id, *, verified_esewa_failure=False):
     """Cancel an unpaid test order and release its promo/reward reservation."""
     with transaction.atomic():
         order = Order.objects.select_for_update().get(pk=order_id)
+        if order.payment_method == "esewa" and not verified_esewa_failure:
+            raise InvalidOrderTransition("Check eSewa's transaction status before cancelling this order.")
         if order.order_status == "cancelled":
             return order
         if order.payment_status in {"paid", "refunded"}:
