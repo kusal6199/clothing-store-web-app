@@ -78,6 +78,10 @@ class ManagementCrudTests(TestCase):
         product = Product.objects.get(slug="admin-tee")
         self.assertEqual(product.colors, ["Black", "White"])
         self.assertEqual(product.variants.get().stock, 6)
+        product_page = self.client.get(reverse("management:products"))
+        self.assertContains(product_page, 'class="admin-product-card"')
+        self.assertContains(product_page, 'class="admin-product-media"')
+        self.assertNotContains(product_page, 'class="product-image"')
         variant = product.variants.get()
         update = self.client.post(reverse("management:product_edit", args=[product.pk]), {
             "name": "Updated Tee", "slug": "admin-tee", "price": "550.00",
