@@ -22,6 +22,18 @@ from .services import InsufficientStock, InvalidPromo, cart_rows, create_order, 
 from .seo import asset_url, json_ld, site_url
 
 
+CHECKOUT_DRAFT_FIELDS = (
+    "customer_name", "phone", "email", "delivery_address", "city", "additional_notes",
+    "delivery_zone", "promo_code", "reward_variant_id", "payment_method",
+)
+
+
+def save_checkout_draft(request, cleaned_data):
+    request.session["checkout_draft"] = {
+        field: cleaned_data.get(field, "") for field in CHECKOUT_DRAFT_FIELDS
+    }
+
+
 def track(request):
     if request.method == "GET" and not request.user.is_staff:
         try:
@@ -213,6 +225,7 @@ def checkout(request):
         if not esewa.configured():
             form.fields["payment_method"].choices = [("manual", "Manual / QR")]
         if form.is_valid():
+            save_checkout_draft(request, form.cleaned_data)
             try:
                 data = dict(form.cleaned_data)
                 if data["payment_method"] == "esewa":
@@ -229,9 +242,12 @@ def checkout(request):
                         "payment_fields": esewa.payment_fields(order),
                     })
                 request.session["cart"] = {}
+                request.session.pop("checkout_draft", None)
                 return redirect("order_success", order_number=order.order_number)
     else:
-        form = CheckoutForm(initial={"delivery_zone": "inside"})
+        initial = {"delivery_zone": "inside"}
+        initial.update(request.session.get("checkout_draft", {}))
+        form = CheckoutForm(initial=initial)
         if not esewa.configured():
             form.fields["payment_method"].choices = [("manual", "Manual / QR")]
     subtotal = sum((row["line_total"] for row in rows), Decimal("0.00"))
@@ -271,6 +287,7 @@ def esewa_result(request, transaction_uuid):
                 request.session["cart"] = {}
             request.session.pop("pending_esewa_transaction_uuid", None)
             request.session.pop("pending_esewa_cart", None)
+            request.session.pop("checkout_draft", None)
         elif order.order_status == "cancelled":
             request.session.pop("pending_esewa_transaction_uuid", None)
             request.session.pop("pending_esewa_cart", None)

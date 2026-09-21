@@ -116,6 +116,7 @@ class EsewaFlowTests(TestCase):
         self.assertContains(self.client.get(reverse("esewa_result", args=[order.esewa_transaction_uuid])),
                             "verified with eSewa")
         self.assertEqual(self.client.session.get("cart"), {})
+        self.assertNotIn("checkout_draft", self.client.session)
 
     def test_pending_attempt_blocks_duplicate_checkout_and_old_result_keeps_new_cart(self):
         _, order = self.place()
@@ -158,6 +159,28 @@ class EsewaFlowTests(TestCase):
         order.refresh_from_db()
         self.assertEqual((order.payment_status, order.order_status), ("failed", "cancelled"))
         self.assertNotIn("pending_esewa_transaction_uuid", self.client.session)
+
+    def test_cancelled_attempt_preserves_entered_checkout_details(self):
+        _, order = self.place(
+            customer_name="Kushal Kadel", phone="9812345678", email="kushal@example.com",
+            delivery_address="Kathmandu 10", city="Kathmandu", additional_notes="Call on arrival",
+            delivery_zone="outside",
+        )
+        with patch("shop.esewa.urlopen", return_value=self.status(order, status="CANCELED")):
+            self.client.get(reverse("esewa_failure", args=[order.esewa_transaction_uuid]))
+        self.client.get(reverse("esewa_result", args=[order.esewa_transaction_uuid]))
+
+        response = self.client.get(reverse("checkout"))
+        form = response.context["form"]
+        self.assertEqual(form["customer_name"].value(), "Kushal Kadel")
+        self.assertEqual(form["phone"].value(), "9812345678")
+        self.assertEqual(form["email"].value(), "kushal@example.com")
+        self.assertEqual(form["delivery_address"].value(), "Kathmandu 10")
+        self.assertEqual(form["city"].value(), "Kathmandu")
+        self.assertEqual(form["additional_notes"].value(), "Call on arrival")
+        self.assertEqual(form["delivery_zone"].value(), "outside")
+        self.assertEqual(form["payment_method"].value(), "esewa")
+        self.assertEqual(self.client.session["cart"][self.variant.pk]["quantity"], 2)
 
     def test_return_to_checkout_keeps_active_pending_attempt_locked(self):
         _, order = self.place()
