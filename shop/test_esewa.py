@@ -129,6 +129,9 @@ class EsewaFlowTests(TestCase):
         self.assertEqual(progress.purchase_count, 11)
         self.assertEqual(order.reward_category_id, self.category.pk)
         self.assertFalse(order.reward_fulfilled)
+        result = self.client.get(reverse("esewa_result", args=[order.esewa_transaction_uuid]))
+        self.assertContains(result, "You earned one free item from Tops")
+        self.assertContains(result, "Choose my free item")
 
     def test_pending_attempt_blocks_duplicate_checkout_and_old_result_keeps_new_cart(self):
         _, order = self.place()
@@ -173,10 +176,11 @@ class EsewaFlowTests(TestCase):
         self.assertNotIn("pending_esewa_transaction_uuid", self.client.session)
 
     def test_cancelled_attempt_preserves_entered_checkout_details(self):
+        LoyaltyProgress.objects.create(phone="9812345678", category=self.category, purchase_count=10)
         _, order = self.place(
             customer_name="Kushal Kadel", phone="9812345678", email="kushal@example.com",
             delivery_address="Kathmandu 10", city="Kathmandu", additional_notes="Call on arrival",
-            delivery_zone="outside",
+            delivery_zone="outside", reward_variant_id=self.variant.pk,
         )
         with patch("shop.esewa.urlopen", return_value=self.status(order, status="CANCELED")):
             self.client.get(reverse("esewa_failure", args=[order.esewa_transaction_uuid]))
@@ -192,6 +196,7 @@ class EsewaFlowTests(TestCase):
         self.assertEqual(form["additional_notes"].value(), "Call on arrival")
         self.assertEqual(form["delivery_zone"].value(), "outside")
         self.assertEqual(form["payment_method"].value(), "esewa")
+        self.assertEqual(form["reward_variant_id"].value(), self.variant.pk)
         self.assertEqual(self.client.session["cart"][self.variant.pk]["quantity"], 2)
 
     def test_return_to_checkout_keeps_active_pending_attempt_locked(self):

@@ -19,6 +19,7 @@ urlpatterns = [
     path("newsletter/subscribe/", views.newsletter_subscribe, name="newsletter_subscribe"),
     path("promo/validate/", views.promo_validate, name="promo_validate"),
     path("loyalty/options/", views.loyalty_options, name="loyalty_options"),
+    path("loyalty/reward/<str:token>/", views.reward_selection, name="reward_selection"),
     path("review/<str:token>/", views.review_by_token, name="review_by_token"),
     path("robots.txt", views.robots, name="robots"),
     path("sitemap.xml", views.sitemap, name="sitemap"),

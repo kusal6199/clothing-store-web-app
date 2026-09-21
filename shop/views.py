@@ -2,6 +2,7 @@ from datetime import timedelta
 from decimal import Decimal
 from django.conf import settings
 from django.contrib import messages
+from django.core import signing
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
@@ -12,11 +13,15 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 from . import esewa
 from .forms import CheckoutForm, ContactForm, NewsletterForm, ReviewForm
+from .loyalty import read_reward_selection_token, reward_catalog, reward_selection_path
 from .models import (
     Category, Collection, HeroSlide, HomepageSection, Message, NewsletterSubscriber, Order,
     Product, ProductVariant, PromoBanner, Review, Tag, Visitor, LoyaltyProgress,
 )
-from .services import InsufficientStock, InvalidPromo, cart_rows, create_order, promo_for, store_settings
+from .services import (
+    InsufficientStock, InvalidOrderTransition, InvalidPromo, cart_rows, create_order,
+    fulfill_order_reward, promo_for, store_settings,
+)
 from .phones import normalize_phone
 from .seo import asset_url, json_ld, site_url
 
@@ -31,6 +36,21 @@ def save_checkout_draft(request, cleaned_data):
     request.session["checkout_draft"] = {
         field: cleaned_data.get(field, "") for field in CHECKOUT_DRAFT_FIELDS
     }
+
+
+def remember_customer_order(request, order):
+    order_ids = list(request.session.get("customer_order_ids", []))
+    if order.pk not in order_ids:
+        order_ids.append(order.pk)
+    request.session["customer_order_ids"] = order_ids[-10:]
+
+
+def customer_reward_path(request, order):
+    if (order.pk in request.session.get("customer_order_ids", [])
+            and order.payment_status == "paid" and order.reward_category_id
+            and not order.reward_fulfilled):
+        return reward_selection_path(order)
+    return ""
 
 
 def track(request):
@@ -233,6 +253,7 @@ def checkout(request):
             except (InsufficientStock, InvalidPromo) as exc:
                 form.add_error(None, str(exc))
             else:
+                remember_customer_order(request, order)
                 if order.payment_method == "esewa":
                     request.session["pending_esewa_transaction_uuid"] = order.esewa_transaction_uuid
                     request.session["pending_esewa_cart"] = request.session.get("cart", {}).copy()
@@ -279,7 +300,10 @@ def esewa_return(request, outcome, transaction_uuid):
 
 @require_GET
 def esewa_result(request, transaction_uuid):
-    order = get_object_or_404(Order, esewa_transaction_uuid=transaction_uuid, payment_method="esewa")
+    order = get_object_or_404(
+        Order.objects.select_related("reward_category", "milestone_reward_item"),
+        esewa_transaction_uuid=transaction_uuid, payment_method="esewa",
+    )
     if request.session.get("pending_esewa_transaction_uuid") == transaction_uuid:
         if order.payment_status == "paid":
             if request.session.get("cart", {}) == request.session.get("pending_esewa_cart", {}):
@@ -290,7 +314,10 @@ def esewa_result(request, transaction_uuid):
         elif order.order_status == "cancelled":
             request.session.pop("pending_esewa_transaction_uuid", None)
             request.session.pop("pending_esewa_cart", None)
-    return render(request, "shop/esewa_result.html", {"order": order})
+    order.refresh_from_db()
+    return render(request, "shop/esewa_result.html", {
+        "order": order, "reward_selection_path": customer_reward_path(request, order),
+    })
 
 
 @require_POST
@@ -326,10 +353,15 @@ def esewa_return_to_checkout(request, transaction_uuid):
 
 
 def order_success(request, order_number):
-    # Order number only; no private customer or payment details are exposed.
-    if not Order.objects.filter(order_number=order_number).exists():
-        raise Http404
-    return render(request, "shop/success.html", {"order_number": order_number})
+    # Private reward actions are shown only to the browser session that placed the order.
+    order = get_object_or_404(
+        Order.objects.select_related("reward_category", "milestone_reward_item"),
+        order_number=order_number,
+    )
+    return render(request, "shop/success.html", {
+        "order": order, "order_number": order.order_number,
+        "reward_selection_path": customer_reward_path(request, order),
+    })
 
 
 def contact(request):
@@ -386,6 +418,7 @@ def loyalty_options(request):
         ).count()
         available = progress.purchase_count // 10 - progress.free_items_redeemed - reserved
         progress_rows.append({
+            "category_id": progress.category_id,
             "category": progress.category.name,
             "qualifying_items": progress.purchase_count,
             "towards_next": progress.purchase_count % 10,
@@ -393,11 +426,49 @@ def loyalty_options(request):
         })
         if available < 1:
             continue
-        variants = ProductVariant.objects.select_related("product").filter(
-            product__category=progress.category, product__visibility=True, stock__gt=0)[:50]
-        rewards.append({"category": progress.category.name, "available": available,
-            "variants": [{"id": variant.pk, "label": f"{variant.product.name} — {variant.size}{' / ' + variant.color if variant.color else ''}"} for variant in variants]})
+        rewards.append({
+            "category_id": progress.category_id,
+            "category": progress.category.name,
+            "available": available,
+            "products": reward_catalog(progress.category_id),
+        })
     return JsonResponse({"rewards": rewards, "progress": progress_rows})
+
+
+def reward_selection(request, token):
+    try:
+        order_id = read_reward_selection_token(token)
+    except signing.SignatureExpired:
+        return HttpResponse("This reward selection link has expired.", status=410)
+    except signing.BadSignature:
+        raise Http404
+    order = get_object_or_404(
+        Order.objects.select_related("reward_category", "milestone_reward_item", "milestone_reward_item__product"),
+        pk=order_id,
+    )
+    if order.payment_status != "paid" or not order.reward_category_id:
+        return HttpResponse("This order does not have a selectable paid reward.", status=409)
+    if request.method == "POST" and not order.reward_fulfilled:
+        variant_id = request.POST.get("reward_variant_id", "").strip()
+        if not variant_id:
+            messages.error(request, "Choose a free product, size, and color.")
+        else:
+            try:
+                fulfill_order_reward(order.pk, variant_id, selection_source="customer")
+            except (InsufficientStock, InvalidOrderTransition) as exc:
+                messages.error(request, str(exc))
+            else:
+                messages.success(request, "Your free loyalty item was added to the order.")
+                return redirect("reward_selection", token=token)
+        order.refresh_from_db()
+    catalog = {
+        "category_id": order.reward_category_id,
+        "category": order.reward_category.name,
+        "products": reward_catalog(order.reward_category_id),
+    } if not order.reward_fulfilled else None
+    return render(request, "shop/reward_selection.html", {
+        "order": order, "token": token, "reward_catalog": catalog,
+    })
 
 def review_by_token(request, token):
     anchor = get_object_or_404(Review.objects.select_related("order"), review_token=token, order__isnull=False)

@@ -60,7 +60,9 @@ class CheckoutForm(forms.Form):
     additional_notes = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}))
     delivery_zone = forms.ChoiceField(choices=(("inside", "Inside valley"), ("outside", "Outside valley")), widget=forms.RadioSelect)
     promo_code = forms.CharField(max_length=80, required=False)
-    reward_variant_id = forms.CharField(max_length=32, required=False, label="Loyalty reward", widget=forms.Select(choices=[("", "No reward selected")]))
+    reward_variant_id = forms.CharField(
+        max_length=32, required=False, label="Loyalty reward variant", widget=forms.HiddenInput,
+    )
     payment_method = forms.ChoiceField(choices=Order.PAYMENT_METHOD, initial="manual", required=False, widget=forms.RadioSelect)
 
     def clean_phone(self):

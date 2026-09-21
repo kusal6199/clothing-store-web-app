@@ -151,21 +151,10 @@ class OrderStatusForm(StyledModelForm):
         status = self.cleaned_data["order_status"]
         if status == "cancelled" and self.instance.order_status != "cancelled":
             raise forms.ValidationError("Use the cancellation action so reservations are released safely.")
+        if (status in {"shipped", "delivered"} and self.instance.payment_status == "paid"
+                and self.instance.reward_category_id and not self.instance.reward_fulfilled):
+            raise forms.ValidationError("Awaiting customer reward selection. Select the reward before shipping this order.")
         return status
-
-
-class RewardFulfilForm(forms.Form):
-    variant = forms.ModelChoiceField(queryset=ProductVariant.objects.none(), empty_label="Choose an in-stock variant")
-
-    def __init__(self, *args, order=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        if order and order.reward_category_id:
-            self.fields["variant"].queryset = ProductVariant.objects.select_related("product").filter(
-                product__category_id=order.reward_category_id,
-                product__visibility=True,
-                stock__gt=0,
-            )
-        self.fields["variant"].widget.attrs["class"] = "control"
 
 
 class SettingsManagementForm(StoreSettingsForm):

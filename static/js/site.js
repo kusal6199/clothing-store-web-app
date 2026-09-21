@@ -12,42 +12,135 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   dots.forEach((dot) => dot.addEventListener('click', () => show(Number(dot.dataset.slide))));
   if (slides.length > 1) window.setInterval(() => show((index + 1) % slides.length), 6000);
+  const configureRewardSelector = (root, reward, selectedVariantId = '') => {
+    const hidden = root.querySelector('[name="reward_variant_id"]');
+    const productSelect = root.querySelector('[data-reward-product]');
+    const sizeSelect = root.querySelector('[data-reward-size]');
+    const colorSelect = root.querySelector('[data-reward-color]');
+    const colorNA = root.querySelector('[data-reward-color-na]');
+    const help = root.querySelector('[data-reward-help]');
+    const submit = root.querySelector('[data-reward-submit]');
+    const summary = document.querySelector('[data-reward-summary]');
+    if (!hidden || !productSelect || !sizeSelect || !colorSelect) return;
+    const products = reward?.products || [];
+    const resetFinalSelection = () => {
+      hidden.value = '';
+      if (submit) submit.disabled = true;
+      if (summary) summary.hidden = true;
+    };
+    const setFinalSelection = (product, variant) => {
+      hidden.value = variant.id;
+      if (submit) submit.disabled = false;
+      if (help) help.textContent = `${product.name} · ${variant.size}${variant.color ? ` · ${variant.color}` : ' · No color'} · FREE`;
+      if (summary) {
+        summary.hidden = false;
+        summary.querySelector('[data-reward-summary-name]').textContent = product.name;
+        summary.querySelector('[data-reward-summary-options]').textContent = `${variant.size}${variant.color ? `, ${variant.color}` : ' · No color'} · Quantity 1`;
+      }
+    };
+    const productFor = (id) => products.find((product) => product.id === id);
+    const fillSizes = (product) => {
+      const sizes = [...new Set((product?.variants || []).map((variant) => variant.size))];
+      sizeSelect.innerHTML = '<option value="">Choose a size</option>';
+      sizes.forEach((size) => sizeSelect.add(new Option(size, size)));
+      sizeSelect.disabled = !product;
+      colorSelect.innerHTML = '<option value="">Choose a size first</option>';
+      colorSelect.disabled = true;
+      colorNA.hidden = true;
+      resetFinalSelection();
+    };
+    const fillColors = (product, size) => {
+      const variants = (product?.variants || []).filter((variant) => variant.size === size);
+      colorSelect.innerHTML = '';
+      colorSelect.required = false;
+      colorNA.hidden = true;
+      resetFinalSelection();
+      if (!variants.length) {
+        colorSelect.add(new Option('No in-stock colors', ''));
+        colorSelect.disabled = true;
+        return;
+      }
+      if (variants.every((variant) => !variant.color)) {
+        colorSelect.add(new Option('Not applicable', ''));
+        colorSelect.disabled = true;
+        colorNA.hidden = false;
+        setFinalSelection(product, variants[0]);
+        return;
+      }
+      colorSelect.add(new Option('Choose a color', ''));
+      variants.filter((variant) => variant.color).forEach((variant) => colorSelect.add(new Option(variant.color, variant.color)));
+      colorSelect.disabled = false;
+      colorSelect.required = true;
+    };
+    productSelect.innerHTML = '<option value="">Choose a free product</option>';
+    products.forEach((product) => productSelect.add(new Option(product.name, product.id)));
+    productSelect.onchange = () => fillSizes(productFor(productSelect.value));
+    sizeSelect.onchange = () => fillColors(productFor(productSelect.value), sizeSelect.value);
+    colorSelect.onchange = () => {
+      const product = productFor(productSelect.value);
+      const variant = product?.variants.find((item) => item.size === sizeSelect.value && item.color === colorSelect.value);
+      resetFinalSelection();
+      if (product && variant) setFinalSelection(product, variant);
+    };
+    resetFinalSelection();
+    if (selectedVariantId) {
+      for (const product of products) {
+        const variant = product.variants.find((item) => item.id === selectedVariantId);
+        if (!variant) continue;
+        productSelect.value = product.id;
+        fillSizes(product);
+        sizeSelect.value = variant.size;
+        fillColors(product, variant.size);
+        if (variant.color) {
+          colorSelect.value = variant.color;
+          setFinalSelection(product, variant);
+        }
+        break;
+      }
+    }
+  };
+  const checkoutReward = document.querySelector('[data-reward-selector][data-source-url]');
   const phone = document.querySelector('#id_phone');
-  const rewardSelect = document.querySelector('#id_reward_variant_id');
-  if (phone && rewardSelect) {
-    const status = document.querySelector('[data-loyalty-status]');
-    const selectedReward = status?.dataset.selectedReward || '';
+  if (phone && checkoutReward) {
+    const status = checkoutReward.querySelector('[data-loyalty-status]');
+    const panel = checkoutReward.querySelector('[data-reward-panel]');
+    const title = checkoutReward.querySelector('[data-reward-title]');
     let timer;
     const loadLoyalty = async () => {
-      rewardSelect.innerHTML = '<option value="">No reward selected</option>';
+      const selectedVariant = checkoutReward.querySelector('[name="reward_variant_id"]').value || checkoutReward.dataset.selectedVariant || '';
+      checkoutReward.dataset.selectedVariant = '';
       if (phone.value.trim().length < 5) {
+        panel.hidden = true;
         if (status) status.textContent = 'Enter your phone number to check progress and available rewards.';
         return;
       }
       if (status) status.textContent = 'Checking loyalty progress…';
       try {
-        const response = await fetch('/loyalty/options/?phone=' + encodeURIComponent(phone.value.trim()));
+        const url = `${checkoutReward.dataset.sourceUrl}?phone=${encodeURIComponent(phone.value.trim())}`;
+        const response = await fetch(url);
         if (!response.ok) throw new Error('Loyalty lookup failed');
         const data = await response.json();
-        for (const reward of data.rewards || []) {
-          for (const variant of reward.variants) {
-            const option = document.createElement('option');
-            option.value = variant.id;
-            option.textContent = `${reward.category}: ${variant.label}`;
-            rewardSelect.appendChild(option);
-          }
-        }
-        if (selectedReward && [...rewardSelect.options].some((option) => option.value === selectedReward)) {
-          rewardSelect.value = selectedReward;
+        const rewards = data.rewards || [];
+        const selectedReward = rewards.find((reward) => reward.products.some((product) => product.variants.some((variant) => variant.id === selectedVariant)));
+        const reward = selectedReward || rewards[0];
+        panel.hidden = !reward;
+        if (reward) {
+          title.textContent = `You have ${reward.available} free ${reward.category} reward${reward.available === 1 ? '' : 's'} available.`;
+          configureRewardSelector(checkoutReward, reward, selectedVariant);
+        } else {
+          checkoutReward.querySelector('[name="reward_variant_id"]').value = '';
+          const summary = document.querySelector('[data-reward-summary]');
+          if (summary) summary.hidden = true;
         }
         if (status) {
           const summaries = (data.progress || []).map((entry) => {
-            const rewards = `${entry.available} reward${entry.available === 1 ? '' : 's'} available`;
-            return `${entry.category}: ${entry.towards_next} of 10 qualifying items · ${rewards}`;
+            const rewardsAvailable = `${entry.available} reward${entry.available === 1 ? '' : 's'} available`;
+            return `${entry.category}: ${entry.towards_next} of 10 qualifying items · ${rewardsAvailable}`;
           });
           status.textContent = summaries.length ? summaries.join(' | ') : 'No paid qualifying items in the categories currently in your bag.';
         }
       } catch (_) {
+        panel.hidden = true;
         if (status) status.textContent = 'Loyalty progress could not be checked. You can still place the order.';
       }
     };
@@ -57,6 +150,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     loadLoyalty();
   }
+  const standaloneReward = document.querySelector('[data-reward-selector]:not([data-source-url])');
+  const rewardData = document.querySelector('#reward-catalog-data');
+  if (standaloneReward && rewardData) configureRewardSelector(standaloneReward, JSON.parse(rewardData.textContent));
   const mainImage = document.querySelector('#main-product-image');
   document.querySelectorAll('[data-image]').forEach((button) => button.addEventListener('click', () => {
     if (mainImage) mainImage.src = button.dataset.image;

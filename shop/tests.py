@@ -499,21 +499,22 @@ class LoyaltyMilestoneTests(TestCase):
         self.assertIsNone(split.reward_category_id)
         self.assertEqual(set(LoyaltyProgress.objects.filter(phone="9800000006").values_list("purchase_count", flat=True)), {5})
 
-    def test_staff_fulfils_same_category_reward_at_zero_price_once(self):
+    def test_customer_reward_service_validates_category_and_redeems_once(self):
         order = self.order("LOYALTY-FULFIL", "9800000007", [(self.tee_variant, 10, False)])
         confirm_order_paid(order.pk)
         with self.assertRaises(InvalidOrderTransition):
             fulfill_order_reward(order.pk, self.trouser_variant.pk)
 
         fulfill_order_reward(order.pk, self.hoodie_variant.pk)
-        with self.assertRaises(InvalidOrderTransition):
-            fulfill_order_reward(order.pk, self.hoodie_variant.pk)
+        fulfill_order_reward(order.pk, self.hoodie_variant.pk)
 
         order.refresh_from_db()
         self.hoodie_variant.refresh_from_db()
         progress = LoyaltyProgress.objects.get(phone="9800000007", category=self.tops)
         reward = order.items.get(is_reward_item=True)
         self.assertTrue(order.reward_fulfilled)
+        self.assertEqual(order.milestone_reward_item, reward)
+        self.assertEqual(order.reward_selection_source, "customer")
         self.assertEqual((reward.product, reward.price, reward.quantity), (self.hoodie, Decimal("0.00"), 1))
         self.assertEqual((progress.purchase_count, progress.free_items_redeemed), (10, 1))
         self.assertEqual(self.hoodie_variant.stock, 99)
@@ -533,40 +534,27 @@ class LoyaltyMilestoneTests(TestCase):
         session.save()
         response = self.client.get(reverse("loyalty_options"), {"phone": "+977 980-000-0008"})
         self.assertEqual(response.json()["progress"], [{
-            "category": "Tops", "qualifying_items": 11, "towards_next": 1, "available": 0,
+            "category_id": self.tops.pk, "category": "Tops", "qualifying_items": 11,
+            "towards_next": 1, "available": 0,
         }])
         self.assertEqual(response.json()["rewards"], [])
 
-    def test_admin_form_only_offers_in_stock_variants_from_pending_category(self):
+    def test_admin_cannot_choose_customer_reward_and_blocks_shipping(self):
         from django.contrib.auth import get_user_model
         from .admin_forms import OrderAdminForm
 
         order = self.order("LOYALTY-ADMIN", "9800000009", [(self.tee_variant, 10, False)])
         confirm_order_paid(order.pk)
         form = OrderAdminForm(instance=Order.objects.get(pk=order.pk))
-        choices = set(form.fields["reward_variant"].queryset.values_list("pk", flat=True))
-        self.assertEqual(choices, {self.tee_variant.pk, self.tee_large_variant.pk, self.hoodie_variant.pk})
-        self.assertNotIn(self.trouser_variant.pk, choices)
+        self.assertNotIn("reward_variant", form.fields)
+        shipping = OrderAdminForm({"order_status": "shipped"}, instance=Order.objects.get(pk=order.pk))
+        self.assertFalse(shipping.is_valid())
+        self.assertIn("customer must select", shipping.errors["order_status"][0])
         admin_user = get_user_model().objects.create_superuser(username="loyalty-admin", password="test-password")
         self.client.force_login(admin_user)
         response = self.client.get(reverse("admin:shop_order_change", args=[order.pk]))
-        self.assertContains(response, "Pending fulfilment")
+        self.assertContains(response, "Awaiting customer reward selection")
         self.assertContains(response, "Buy 10 paid items from the same category using the same phone number")
-        item = order.items.get(is_reward_item=False)
-        response = self.client.post(reverse("admin:shop_order_change", args=[order.pk]), {
-            "customer_name": order.customer_name, "phone": order.phone, "email": "",
-            "delivery_address": order.delivery_address, "city": "", "additional_notes": "",
-            "delivery_zone": order.delivery_zone, "payment_screenshot": "",
-            "order_status": order.order_status, "promo_code": "", "review_email_sent_at": "",
-            "reward_variant": self.hoodie_variant.pk,
-            "items-TOTAL_FORMS": "1", "items-INITIAL_FORMS": "1",
-            "items-MIN_NUM_FORMS": "0", "items-MAX_NUM_FORMS": "1000",
-            "items-0-id": item.pk, "items-0-order": order.pk, "_save": "Save",
-        })
-        self.assertEqual(response.status_code, 302, getattr(response, "context", None))
-        order.refresh_from_db()
-        self.assertTrue(order.reward_fulfilled)
-        self.assertTrue(order.items.filter(is_reward_item=True, product=self.hoodie, price=0).exists())
 
 
 class ReviewEmailTests(TestCase):

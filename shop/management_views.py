@@ -22,16 +22,17 @@ from . import esewa
 from .forms import STORE_SETTING_GROUPS
 from .management_forms import (
     CategoryForm, CollectionForm, HeroSlideForm, HomepageSectionForm, OrderStatusForm,
-    ProductForm, ProductVariantFormSet, PromoBannerForm, PromoCodeForm, RewardFulfilForm,
+    ProductForm, ProductVariantFormSet, PromoBannerForm, PromoCodeForm,
     SettingsManagementForm, TagForm,
 )
 from .models import (
     Category, Collection, HeroSlide, HomepageSection, LoyaltyProgress, Message, Order,
     OrderItem, Product, PromoBanner, PromoCode, Review, Setting, Tag, Visitor,
 )
+from .loyalty import reward_selection_path
 from .services import (
     InsufficientStock, InvalidOrderTransition, cancel_pending_order, confirm_order_paid,
-    fulfill_order_reward, store_settings,
+    store_settings,
 )
 from .storage import save_image
 
@@ -285,7 +286,7 @@ def homepage_delete(request, kind, pk):
 
 
 def _filtered_orders(request):
-    queryset = Order.objects.select_related("reward_category", "promo_code")
+    queryset = Order.objects.select_related("reward_category", "promo_code", "milestone_reward_item")
     query = request.GET.get("q", "").strip()
     if query:
         queryset = queryset.filter(Q(order_number__icontains=query) | Q(customer_name__icontains=query) | Q(phone__icontains=query))
@@ -320,10 +321,20 @@ def orders_export(request):
 
 @superuser_required
 def order_detail(request, pk):
-    order = get_object_or_404(Order.objects.select_related("reward_category", "promo_code").prefetch_related("items"), pk=pk)
+    order = get_object_or_404(Order.objects.select_related(
+        "reward_category", "promo_code", "milestone_reward_item", "milestone_reward_item__product",
+    ).prefetch_related("items"), pk=pk)
+    reward_progress = None
+    if order.reward_category_id:
+        reward_progress = LoyaltyProgress.objects.filter(
+            phone=order.phone, category_id=order.reward_category_id,
+        ).first()
+    selection_url = ""
+    if order.payment_status == "paid" and order.reward_category_id and not order.reward_fulfilled:
+        selection_url = request.build_absolute_uri(reward_selection_path(order))
     return render(request, "management/order_detail.html", {
         "section": "orders", "order": order, "status_form": OrderStatusForm(instance=order),
-        "reward_form": RewardFulfilForm(order=order),
+        "reward_progress": reward_progress, "reward_selection_url": selection_url,
     })
 
 
@@ -379,23 +390,6 @@ def order_check_esewa(request, pk):
             messages.error(request, str(exc))
         else:
             messages.success(request, f"eSewa status: {result}.")
-    return redirect("management:order_detail", pk=pk)
-
-
-@require_POST
-@superuser_required
-def order_fulfil_reward(request, pk):
-    order = get_object_or_404(Order, pk=pk)
-    form = RewardFulfilForm(request.POST, order=order)
-    if form.is_valid():
-        try:
-            fulfill_order_reward(order.pk, form.cleaned_data["variant"].pk)
-        except (InsufficientStock, InvalidOrderTransition) as exc:
-            messages.error(request, str(exc))
-        else:
-            messages.success(request, "The free reward item was added and stock was deducted.")
-    else:
-        messages.error(request, "Choose an in-stock variant from the earned category.")
     return redirect("management:order_detail", pk=pk)
 
 

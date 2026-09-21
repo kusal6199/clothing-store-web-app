@@ -181,6 +181,15 @@ class Order(Timestamped):
     esewa_ref_id = models.CharField(max_length=100, blank=True)
     reward_category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name="reward_orders")
     reward_fulfilled = models.BooleanField(default=False)
+    milestone_reward_item = models.ForeignKey(
+        "OrderItem", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="+", help_text="The customer's selected item for a reward earned by this paid order.",
+    )
+    reward_selection_source = models.CharField(
+        max_length=20, blank=True,
+        choices=(("customer", "Customer"), ("admin_override", "Administrator override")),
+    )
+    reward_selected_at = models.DateTimeField(null=True, blank=True)
     promo_code = models.ForeignKey(PromoCode, on_delete=models.SET_NULL, null=True, blank=True, related_name="orders")
     review_email_sent_at = models.DateTimeField(null=True, blank=True)
 

@@ -154,9 +154,9 @@ class OrderAdmin(admin.ModelAdmin):
     form = OrderAdminForm
     list_display = ("order_number", "customer_name", "phone", "total", "payment_method", "payment_status", "reward_status", "esewa_status", "order_status", "created_at")
     list_filter = ("payment_method", "payment_status", "order_status", "created_at")
-    list_select_related = ("reward_category",)
+    list_select_related = ("reward_category", "milestone_reward_item")
     search_fields = ("order_number", "customer_name", "phone")
-    readonly_fields = ("order_number", "subtotal", "discount_amount", "delivery_charge", "total", "payment_status", "payment_method", "esewa_transaction_uuid", "esewa_product_code", "esewa_status", "esewa_ref_id", "reward_category", "reward_fulfilled", "reward_summary", "created_at", "updated_at")
+    readonly_fields = ("order_number", "subtotal", "discount_amount", "delivery_charge", "total", "payment_status", "payment_method", "esewa_transaction_uuid", "esewa_product_code", "esewa_status", "esewa_ref_id", "reward_category", "reward_fulfilled", "milestone_reward_item", "reward_selection_source", "reward_selected_at", "reward_summary", "created_at", "updated_at")
     inlines = [OrderItemInline]
     actions = [mark_paid, cancel_unpaid, check_esewa, export_orders]
 
@@ -164,7 +164,7 @@ class OrderAdmin(admin.ModelAdmin):
     def reward_status(self, order):
         if not order.reward_category_id:
             return "—"
-        state = "Fulfilled" if order.reward_fulfilled else "Pending"
+        state = "Customer selected" if order.reward_fulfilled else "Awaiting customer selection"
         return f"{state}: {order.reward_category}"
 
     @admin.display(description="Loyalty reward status")
@@ -172,24 +172,18 @@ class OrderAdmin(admin.ModelAdmin):
         if not order.reward_category_id:
             return "No milestone reward attached to this order."
         if order.reward_fulfilled:
+            if order.milestone_reward_item_id:
+                item = order.milestone_reward_item
+                return format_html(
+                    "<strong>Customer selected:</strong> {} — {}{} (FREE).",
+                    item.product_name, item.size, f" / {item.color}" if item.color else "",
+                )
             return format_html("<strong>Fulfilled:</strong> one free {} item was added and accounted for.", order.reward_category)
         return format_html(
-            "<strong>Pending fulfilment:</strong> choose one in-stock {} variant below. "
+            "<strong>Awaiting customer reward selection:</strong> the customer must choose an in-stock {} product, size, and color. "
             "Buy 10 paid items from the same category using the same phone number and receive 1 free item from that category.",
             order.reward_category,
         )
-
-    def save_model(self, request, obj, form, change):
-        reward_variant = form.cleaned_data.get("reward_variant")
-        super().save_model(request, obj, form, change)
-        if reward_variant:
-            from .services import fulfill_order_reward, InsufficientStock, InvalidOrderTransition
-            try:
-                fulfill_order_reward(obj.pk, reward_variant.pk)
-            except (InsufficientStock, InvalidOrderTransition) as exc:
-                self.message_user(request, str(exc), level=messages.ERROR)
-            else:
-                self.message_user(request, "The loyalty reward was added as a free item and stock was updated.", level=messages.SUCCESS)
 
 
 @admin.register(PromoCode)

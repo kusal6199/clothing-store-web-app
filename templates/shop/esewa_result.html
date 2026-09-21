@@ -7,6 +7,7 @@
   <p>Order <strong>{{ order.order_number }}</strong></p>
   {% if order.payment_status == 'paid' %}
     <p>Your test payment was verified with eSewa. Your order is confirmed.</p>
+    {% if reward_selection_path %}<div class="earned-reward-callout"><h2>You earned one free item from {{ order.reward_category.name }}.</h2><p>Choose the product, size, and color you want us to include.</p><a class="button" href="{{ reward_selection_path }}">Choose my free item</a></div>{% endif %}
   {% elif order.order_status == 'cancelled' %}
     <p>eSewa reported this test payment as cancelled or expired. Your order was cancelled; you can place a new one.</p>
     <a class="button" href="{% url 'checkout' %}">Return to checkout</a>

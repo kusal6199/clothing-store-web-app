@@ -28,7 +28,6 @@ urlpatterns = [
     path("orders/<str:pk>/confirm-payment/", views.order_confirm_payment, name="order_confirm_payment"),
     path("orders/<str:pk>/cancel/", views.order_cancel, name="order_cancel"),
     path("orders/<str:pk>/check-esewa/", views.order_check_esewa, name="order_check_esewa"),
-    path("orders/<str:pk>/fulfil-reward/", views.order_fulfil_reward, name="order_fulfil_reward"),
     path("loyalty/", views.loyalty, name="loyalty"),
     path("promo-codes/", views.promo_codes, name="promo_codes"),
     path("promo-codes/add/", views.promo_edit, name="promo_add"),

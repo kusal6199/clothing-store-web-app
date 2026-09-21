@@ -201,11 +201,15 @@ def confirm_order_paid(order_id, *, verified_esewa=False):
         return order
 
 
-def fulfill_order_reward(order_id, variant_id):
-    """Attach and account for one earned milestone reward during packing."""
+def fulfill_order_reward(order_id, variant_id, *, selection_source="customer"):
+    """Atomically record the customer's milestone choice and redeem it once."""
+    if selection_source not in {"customer", "admin_override"}:
+        raise InvalidOrderTransition("Invalid reward selection source.")
     with transaction.atomic():
         order = Order.objects.select_for_update().select_related("reward_category").get(pk=order_id)
-        if order.payment_status != "paid" or not order.reward_category_id or order.reward_fulfilled:
+        if order.reward_fulfilled:
+            return order
+        if order.payment_status != "paid" or not order.reward_category_id:
             raise InvalidOrderTransition("This order has no pending loyalty reward.")
         variant = ProductVariant.objects.select_for_update().select_related("product").filter(
             pk=variant_id, product__visibility=True).first()
@@ -218,10 +222,19 @@ def fulfill_order_reward(order_id, variant_id):
             phone=phone, category_id=order.reward_category_id).first()
         if not progress or progress.purchase_count // 10 - progress.free_items_redeemed < 1:
             raise InvalidOrderTransition("This loyalty reward is no longer available.")
+        claimed = Order.objects.filter(
+            pk=order.pk, payment_status="paid", reward_fulfilled=False,
+            milestone_reward_item__isnull=True,
+        ).update(reward_fulfilled=True)
+        if not claimed:
+            current = Order.objects.get(pk=order.pk)
+            if current.reward_fulfilled:
+                return current
+            raise InvalidOrderTransition("This reward is already being processed.")
         updated = ProductVariant.objects.filter(pk=variant.pk, stock__gt=0).update(stock=F("stock") - 1)
         if not updated:
             raise InsufficientStock("That variant just went out of stock.")
-        OrderItem.objects.create(
+        reward_item = OrderItem.objects.create(
             order=order, product=variant.product, product_name=variant.product.name,
             product_image=variant.product.primary_image, size=variant.size, color=variant.color or "",
             price=Decimal("0.00"), quantity=1, is_reward_item=True,
@@ -229,7 +242,13 @@ def fulfill_order_reward(order_id, variant_id):
         LoyaltyProgress.objects.filter(pk=progress.pk).update(
             free_items_redeemed=F("free_items_redeemed") + 1)
         order.reward_fulfilled = True
-        order.save(update_fields=["reward_fulfilled", "updated_at"])
+        order.milestone_reward_item = reward_item
+        order.reward_selection_source = selection_source
+        order.reward_selected_at = timezone.now()
+        order.save(update_fields=[
+            "reward_fulfilled", "milestone_reward_item", "reward_selection_source",
+            "reward_selected_at", "updated_at",
+        ])
         return order
 
 

@@ -20,11 +20,27 @@
           {% endif %}
         {% endfor %}
       </div>
-      <div class="form-field loyalty-field">
-        <label for="id_reward_variant_id">Loyalty reward</label>
+      <div class="form-field loyalty-field" data-reward-selector data-source-url="{% url 'loyalty_options' %}" data-selected-variant="{{ form.reward_variant_id.value|default:'' }}">
         {{ form.reward_variant_id }}
-        <small>Buy 10 paid items from the same category using the same phone number and receive 1 free item from that category.</small>
-        <div class="loyalty-progress" data-loyalty-status data-selected-reward="{{ form.reward_variant_id.value|default:'' }}" aria-live="polite">Enter your phone number to check progress and available rewards.</div>
+        {% if form.reward_variant_id.errors %}<small class="field-error">{{ form.reward_variant_id.errors|striptags }}</small>{% endif %}
+        <p class="loyalty-rule">Buy 10 paid items from the same category using the same phone number and receive 1 free item from that category.</p>
+        <div class="loyalty-progress" data-loyalty-status aria-live="polite">Enter your phone number to check progress and available rewards.</div>
+        <section class="reward-choice-panel" data-reward-panel hidden>
+          <p class="reward-choice-title" data-reward-title></p>
+          <div class="reward-choice-grid">
+            <label>Free product
+              <select data-reward-product><option value="">Choose a free product</option></select>
+            </label>
+            <label>Size
+              <select data-reward-size disabled><option value="">Choose a product first</option></select>
+            </label>
+            <label>Color
+              <select data-reward-color disabled><option value="">Choose a size first</option></select>
+              <small data-reward-color-na hidden>Color is not applicable for this item.</small>
+            </label>
+          </div>
+          <p class="reward-choice-help" data-reward-help>Choose the product, then its size and color.</p>
+        </section>
       </div>
       <div class="form-field">
         <label for="id_promo_code">Promo code</label>
@@ -48,6 +64,7 @@
       {% for row in rows %}
         <div class="checkout-item"><span>{{ row.product.name }} × {{ row.quantity }}<small>{{ row.variant.size }}{% if row.variant.color %}, {{ row.variant.color }}{% endif %}</small></span><strong>Rs {{ row.line_total|floatformat:0 }}</strong></div>
       {% endfor %}
+      <div class="checkout-item reward-summary-item" data-reward-summary hidden><span><strong data-reward-summary-name></strong> × 1<small data-reward-summary-options></small><small>FREE — Loyalty Reward</small></span><strong>FREE</strong></div>
       <div class="summary-line"><span>Subtotal</span><strong>Rs {{ subtotal|floatformat:0 }}</strong></div>
       <div class="summary-line"><span>Delivery <span data-delivery-zone>{{ selected_zone }} valley</span></span><strong data-delivery>Rs {{ initial_delivery|floatformat:0 }}</strong></div>
       <div class="summary-line" data-discount-row hidden><span>Promo discount</span><strong data-discount>−Rs 0</strong></div>

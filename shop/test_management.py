@@ -6,6 +6,7 @@ from django.test import TestCase
 from django.urls import NoReverseMatch, reverse
 
 from .models import Category, LoyaltyProgress, Message, Order, OrderItem, Product, ProductVariant, PromoCode
+from .services import fulfill_order_reward
 
 
 class ManagementAuthorizationTests(TestCase):
@@ -174,19 +175,21 @@ class ManagementOrderActionTests(TestCase):
         self.assertRedirects(response, reverse("management:order_detail", args=[order.pk]))
         reconcile.assert_called_once()
 
-    def test_reward_fulfilment_rejects_other_category_and_deducts_once(self):
+    def test_management_waits_for_customer_then_displays_exact_selection(self):
         order = self.order("MANAGEMENT-REWARD", payment_status="paid", order_status="confirmed", reward_category=self.tops)
         LoyaltyProgress.objects.create(phone=order.phone, category=self.tops, purchase_count=10)
-        url = reverse("management:order_fulfil_reward", args=[order.pk])
-        self.client.post(url, {"variant": self.other_variant.pk})
+        detail_url = reverse("management:order_detail", args=[order.pk])
+        awaiting = self.client.get(detail_url)
+        self.assertContains(awaiting, "Awaiting customer reward selection")
+        self.assertContains(awaiting, "Secure customer link")
+        self.assertNotContains(awaiting, "Add free item")
+        self.client.post(reverse("management:order_status", args=[order.pk]), {"order_status": "shipped"})
         order.refresh_from_db()
+        self.assertEqual(order.order_status, "confirmed")
         self.assertFalse(order.reward_fulfilled)
-        self.client.post(url, {"variant": self.variant.pk})
-        self.client.post(url, {"variant": self.variant.pk})
+        fulfill_order_reward(order.pk, self.variant.pk, selection_source="customer")
         order.refresh_from_db()
-        self.variant.refresh_from_db()
-        progress = LoyaltyProgress.objects.get(phone=order.phone, category=self.tops)
         self.assertTrue(order.reward_fulfilled)
-        self.assertEqual(order.items.filter(is_reward_item=True, price=0).count(), 1)
-        self.assertEqual(self.variant.stock, 29)
-        self.assertEqual(progress.free_items_redeemed, 1)
+        selected = self.client.get(detail_url)
+        self.assertContains(selected, "Customer selected")
+        self.assertContains(selected, "Tee · M · No color")

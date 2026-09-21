@@ -1,0 +1,45 @@
+{% extends 'shop/base.html' %}
+{% block title %}Choose Your Loyalty Reward{% endblock %}
+{% block content %}
+<div class="container page-content reward-selection-page">
+  <p class="eyebrow">Loyalty reward</p>
+  {% if order.reward_fulfilled and order.milestone_reward_item %}
+    <div class="success-state reward-confirmation">
+      <div class="success-icon">✓</div>
+      <h1>Your free item is selected</h1>
+      <p>The shop will include it when packing order <strong>{{ order.order_number }}</strong>.</p>
+      <div class="selected-reward-card">
+        {% if order.milestone_reward_item.product_image %}<img src="{{ order.milestone_reward_item.product_image }}" alt="">{% endif %}
+        <div><strong>{{ order.milestone_reward_item.product_name }}</strong><span>{{ order.milestone_reward_item.size }}{% if order.milestone_reward_item.color %} · {{ order.milestone_reward_item.color }}{% endif %}</span><b>FREE — Loyalty Reward</b></div>
+      </div>
+      <a class="button" href="{% url 'catalog' %}">Continue shopping</a>
+    </div>
+  {% else %}
+    <div class="reward-selection-shell">
+      <div>
+        <h1>You earned one free item from {{ order.reward_category.name }}</h1>
+        <p>Choose your free product, size, and color. Your choice will be added to order <strong>{{ order.order_number }}</strong> at no cost.</p>
+      </div>
+      <form method="post" class="reward-choice-panel standalone" data-reward-selector data-selected-variant="">
+        {% csrf_token %}
+        <input type="hidden" name="reward_variant_id" value="">
+        {{ reward_catalog|json_script:"reward-catalog-data" }}
+        <div class="reward-choice-grid">
+          <label>Free product
+            <select data-reward-product required><option value="">Choose a free product</option></select>
+          </label>
+          <label>Size
+            <select data-reward-size required disabled><option value="">Choose a product first</option></select>
+          </label>
+          <label>Color
+            <select data-reward-color disabled><option value="">Choose a size first</option></select>
+            <small data-reward-color-na hidden>Color is not applicable for this item.</small>
+          </label>
+        </div>
+        <p class="reward-choice-help" data-reward-help>Choose the product, then its size and color.</p>
+        <button class="button" type="submit" data-reward-submit disabled>Confirm my free item</button>
+      </form>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
