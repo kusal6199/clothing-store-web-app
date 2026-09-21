@@ -4,6 +4,7 @@ import binascii
 import hashlib
 import hmac
 import json
+import ssl
 from decimal import Decimal, InvalidOperation
 from urllib.parse import urlencode
 from urllib.request import urlopen
@@ -16,7 +17,7 @@ from .services import InsufficientStock, InvalidOrderTransition, cancel_pending_
 
 
 PAYMENT_URL = "https://rc-epay.esewa.com.np/api/epay/main/v2/form"
-STATUS_URL = "https://rc.esewa.com.np/api/epay/transaction/status/"
+STATUS_URL = "https://rc-epay.esewa.com.np/api/epay/transaction/status/"
 REQUEST_FIELDS = "total_amount,transaction_uuid,product_code"
 RESPONSE_FIELDS = "transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names"
 
@@ -26,7 +27,9 @@ class EsewaVerificationError(Exception):
 
 
 def configured():
-    return bool(settings.ESEWA_SECRET_KEY and settings.ESEWA_MERCHANT_CODE)
+    return bool(settings.ESEWA_SECRET_KEY and settings.ESEWA_MERCHANT_CODE
+                and not (settings.ESEWA_MERCHANT_CODE == "EPAYTEST"
+                         and settings.ESEWA_SECRET_KEY.endswith("(")))
 
 
 def amount(value):
@@ -98,7 +101,8 @@ def status_response(order):
                        "total_amount": f"{order.total:.2f}",
                        "transaction_uuid": order.esewa_transaction_uuid})
     try:
-        with urlopen(f"{STATUS_URL}?{query}", timeout=8) as response:
+        context = ssl.create_default_context(cafile=settings.ESEWA_CA_BUNDLE or None)
+        with urlopen(f"{STATUS_URL}?{query}", timeout=8, context=context) as response:
             if response.status != 200:
                 raise EsewaVerificationError("eSewa status service returned an error")
             result = json.load(response, parse_float=Decimal, parse_int=Decimal)

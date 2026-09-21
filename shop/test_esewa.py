@@ -8,6 +8,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from . import esewa
+from .checks import esewa_uat_configuration
 from .models import Category, LoyaltyProgress, Order, Product, ProductVariant, PromoCode, Setting
 from .services import InvalidOrderTransition, cancel_pending_order, confirm_order_paid
 
@@ -67,6 +68,25 @@ class EsewaFlowTests(TestCase):
         self.assertEqual(fields["signature"], esewa.sign(
             f"total_amount=2500.00,transaction_uuid={order.esewa_transaction_uuid},product_code=EPAYTEST"))
         self.assertEqual(self.variant.stock, 5)
+
+    def test_uat_configuration_rejects_trailing_parenthesis_typo(self):
+        with override_settings(ESEWA_SECRET_KEY="synthetic-uat-key"):
+            self.assertTrue(esewa.configured())
+            self.assertEqual(esewa_uat_configuration(None), [])
+        with override_settings(ESEWA_SECRET_KEY="synthetic-uat-key("):
+            self.assertFalse(esewa.configured())
+            self.assertEqual(esewa_uat_configuration(None)[0].id, "shop.E001")
+
+    def test_status_check_uses_working_uat_host_and_configured_ca_bundle(self):
+        _, order = self.place()
+        with (override_settings(ESEWA_CA_BUNDLE="/tmp/test-ca.pem"),
+              patch("shop.esewa.ssl.create_default_context", return_value="context") as context,
+              patch("shop.esewa.urlopen", return_value=self.status(order, status="PENDING")) as request):
+            self.assertEqual(esewa.status_response(order)["status"], "PENDING")
+        context.assert_called_once_with(cafile="/tmp/test-ca.pem")
+        self.assertTrue(request.call_args.args[0].startswith(
+            "https://rc-epay.esewa.com.np/api/epay/transaction/status/?"))
+        self.assertEqual(request.call_args.kwargs["context"], "context")
 
     def test_discounted_amount_is_signed_from_stored_order(self):
         PromoCode.objects.create(code="SAVE10", influencer_name="Test", discount_percent=10)

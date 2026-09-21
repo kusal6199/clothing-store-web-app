@@ -113,3 +113,4 @@ SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000").rstrip("/")
 # secret in the server environment to enable the option; there is no live mode.
 ESEWA_MERCHANT_CODE = os.getenv("ESEWA_MERCHANT_CODE", "EPAYTEST")
 ESEWA_SECRET_KEY = os.getenv("ESEWA_SECRET_KEY", "")
+ESEWA_CA_BUNDLE = os.getenv("ESEWA_CA_BUNDLE", "")
