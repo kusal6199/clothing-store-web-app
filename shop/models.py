@@ -4,6 +4,7 @@ from uuid import uuid4
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.text import slugify
+from .phones import normalize_phone
 
 
 def new_id():
@@ -189,6 +190,10 @@ class Order(Timestamped):
     def __str__(self):
         return self.order_number
 
+    def save(self, *args, **kwargs):
+        self.phone = normalize_phone(self.phone)
+        super().save(*args, **kwargs)
+
 
 class OrderItem(models.Model):
     id = models.CharField(primary_key=True, max_length=32, default=new_id, editable=False)
@@ -219,6 +224,22 @@ class LoyaltyProgress(Timestamped):
 
     def __str__(self):
         return f"{self.phone}: {self.category.name}"
+
+    @property
+    def rewards_earned(self):
+        return self.purchase_count // 10
+
+    @property
+    def rewards_available(self):
+        return max(0, self.rewards_earned - self.free_items_redeemed)
+
+    @property
+    def progress_to_next_reward(self):
+        return self.purchase_count % 10
+
+    def save(self, *args, **kwargs):
+        self.phone = normalize_phone(self.phone)
+        super().save(*args, **kwargs)
 
 
 class Message(models.Model):

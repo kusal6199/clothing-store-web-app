@@ -3,9 +3,10 @@ from collections import Counter
 from decimal import Decimal, ROUND_HALF_UP
 from uuid import uuid4
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Q
 from django.utils import timezone
 from .models import LoyaltyProgress, Order, OrderItem, ProductVariant, PromoCode, Setting
+from .phones import normalize_phone
 
 MONEY = Decimal("0.01")
 
@@ -79,11 +80,15 @@ def create_order(form_data, cart):
             purchased_categories = {row["product"].category_id for row in rows}
             if not reward_variant or reward_variant.product.category_id not in purchased_categories:
                 raise InsufficientStock("Choose a reward from a category in your bag.")
+            phone = normalize_phone(form_data["phone"])
             reward_progress = LoyaltyProgress.objects.select_for_update().filter(
-                phone=form_data["phone"].strip(), category_id=reward_variant.product.category_id).first()
-            pending = Order.objects.filter(phone=form_data["phone"].strip(),
-                reward_category_id=reward_variant.product.category_id, payment_status="pending").exclude(
-                order_status="cancelled").count()
+                phone=phone, category_id=reward_variant.product.category_id).first()
+            pending = Order.objects.filter(
+                phone=phone, reward_category_id=reward_variant.product.category_id,
+            ).filter(
+                Q(payment_status="pending") & ~Q(order_status="cancelled")
+                | Q(payment_status="paid", reward_fulfilled=False)
+            ).count()
             available = (reward_progress.purchase_count // 10 - reward_progress.free_items_redeemed - pending) if reward_progress else 0
             if available < 1:
                 raise InsufficientStock("This loyalty reward is no longer available.")
@@ -108,7 +113,7 @@ def create_order(form_data, cart):
             PromoCode.objects.filter(pk=promo.pk).update(current_uses=F("current_uses") + 1)
         order = Order.objects.create(
             order_number=f"CS-{timezone.now():%y%m%d}-{uuid4().hex[:8].upper()}",
-            customer_name=form_data["customer_name"], phone=form_data["phone"].strip(),
+            customer_name=form_data["customer_name"], phone=normalize_phone(form_data["phone"]),
             email=form_data.get("email", ""), delivery_address=form_data["delivery_address"],
             city=form_data.get("city", ""), additional_notes=form_data.get("additional_notes", ""),
             delivery_zone=zone, delivery_charge=charge, subtotal=subtotal,
@@ -132,7 +137,7 @@ def create_order(form_data, cart):
 
 
 def confirm_order_paid(order_id, *, verified_esewa=False):
-    """Idempotently mark a payment paid, deduct stock, and count loyalty."""
+    """Atomically settle stock, loyalty progress, redemption, and a milestone reward."""
     with transaction.atomic():
         order = Order.objects.select_for_update().get(pk=order_id)
         if order.payment_method == "esewa" and not verified_esewa:
@@ -152,23 +157,79 @@ def confirm_order_paid(order_id, *, verified_esewa=False):
             if not updated:
                 raise InsufficientStock("Insufficient stock to confirm this order.")
         purchased = Counter()
+        redeemed = Counter()
         for item in items:
-            if item.product and item.product.category_id and not item.is_reward_item:
-                purchased[item.product.category_id] += item.quantity
-        for category_id, quantity in purchased.items():
-            progress, _ = LoyaltyProgress.objects.select_for_update().get_or_create(phone=order.phone, category_id=category_id)
-            LoyaltyProgress.objects.filter(pk=progress.pk).update(purchase_count=F("purchase_count") + quantity)
-        if order.reward_category_id:
-            progress = LoyaltyProgress.objects.select_for_update().filter(
-                phone=order.phone, category_id=order.reward_category_id).first()
-            if not progress or progress.purchase_count // 10 - progress.free_items_redeemed < 1:
+            if not item.product or not item.product.category_id:
+                continue
+            target = redeemed if item.is_reward_item else purchased
+            target[item.product.category_id] += item.quantity
+        phone = normalize_phone(order.phone)
+        category_ids = set(purchased) | set(redeemed)
+        progress_by_category = {
+            progress.category_id: progress for progress in LoyaltyProgress.objects.select_for_update().filter(
+                phone=phone, category_id__in=category_ids)
+        }
+        for category_id, quantity in redeemed.items():
+            progress = progress_by_category.get(category_id)
+            available = progress.purchase_count // 10 - progress.free_items_redeemed if progress else 0
+            if quantity > available:
                 raise InsufficientStock("Loyalty reward is no longer available.")
-            LoyaltyProgress.objects.filter(pk=progress.pk).update(free_items_redeemed=F("free_items_redeemed") + 1)
+        earned_reward_category_id = None
+        for category_id, quantity in purchased.items():
+            progress = progress_by_category.get(category_id)
+            old_count = progress.purchase_count if progress else 0
+            if earned_reward_category_id is None and (old_count + quantity) // 10 > old_count // 10:
+                earned_reward_category_id = category_id
+            if progress:
+                LoyaltyProgress.objects.filter(pk=progress.pk).update(purchase_count=F("purchase_count") + quantity)
+            else:
+                progress_by_category[category_id] = LoyaltyProgress.objects.create(
+                    phone=phone, category_id=category_id, purchase_count=quantity)
+        for category_id, quantity in redeemed.items():
+            LoyaltyProgress.objects.filter(pk=progress_by_category[category_id].pk).update(
+                free_items_redeemed=F("free_items_redeemed") + quantity)
+        if earned_reward_category_id:
+            order.reward_category_id = earned_reward_category_id
+            order.reward_fulfilled = False
+        elif redeemed:
             order.reward_fulfilled = True
+        order.phone = phone
         order.payment_status = "paid"
         if order.order_status == "pending":
             order.order_status = "confirmed"
-        order.save(update_fields=["payment_status", "order_status", "reward_fulfilled", "updated_at"])
+        order.save(update_fields=["phone", "payment_status", "order_status", "reward_category", "reward_fulfilled", "updated_at"])
+        return order
+
+
+def fulfill_order_reward(order_id, variant_id):
+    """Attach and account for one earned milestone reward during packing."""
+    with transaction.atomic():
+        order = Order.objects.select_for_update().select_related("reward_category").get(pk=order_id)
+        if order.payment_status != "paid" or not order.reward_category_id or order.reward_fulfilled:
+            raise InvalidOrderTransition("This order has no pending loyalty reward.")
+        variant = ProductVariant.objects.select_for_update().select_related("product").filter(
+            pk=variant_id, product__visibility=True).first()
+        if not variant or variant.product.category_id != order.reward_category_id:
+            raise InvalidOrderTransition("Choose an available product from the earned category.")
+        if variant.stock < 1:
+            raise InsufficientStock("Choose an in-stock size and color.")
+        phone = normalize_phone(order.phone)
+        progress = LoyaltyProgress.objects.select_for_update().filter(
+            phone=phone, category_id=order.reward_category_id).first()
+        if not progress or progress.purchase_count // 10 - progress.free_items_redeemed < 1:
+            raise InvalidOrderTransition("This loyalty reward is no longer available.")
+        updated = ProductVariant.objects.filter(pk=variant.pk, stock__gt=0).update(stock=F("stock") - 1)
+        if not updated:
+            raise InsufficientStock("That variant just went out of stock.")
+        OrderItem.objects.create(
+            order=order, product=variant.product, product_name=variant.product.name,
+            product_image=variant.product.primary_image, size=variant.size, color=variant.color or "",
+            price=Decimal("0.00"), quantity=1, is_reward_item=True,
+        )
+        LoyaltyProgress.objects.filter(pk=progress.pk).update(
+            free_items_redeemed=F("free_items_redeemed") + 1)
+        order.reward_fulfilled = True
+        order.save(update_fields=["reward_fulfilled", "updated_at"])
         return order
 
 

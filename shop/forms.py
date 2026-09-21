@@ -1,5 +1,6 @@
 from django import forms
 from .models import Message, Order
+from .phones import normalize_phone
 
 
 class ContactForm(forms.ModelForm):
@@ -61,6 +62,12 @@ class CheckoutForm(forms.Form):
     promo_code = forms.CharField(max_length=80, required=False)
     reward_variant_id = forms.CharField(max_length=32, required=False, label="Loyalty reward", widget=forms.Select(choices=[("", "No reward selected")]))
     payment_method = forms.ChoiceField(choices=Order.PAYMENT_METHOD, initial="manual", required=False, widget=forms.RadioSelect)
+
+    def clean_phone(self):
+        phone = normalize_phone(self.cleaned_data["phone"])
+        if len(phone) < 5:
+            raise forms.ValidationError("Enter a valid phone number.")
+        return phone
 
     def clean_payment_method(self):
         return self.cleaned_data["payment_method"] or "manual"

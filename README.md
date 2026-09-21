@@ -16,6 +16,12 @@ For test orders, staff can use Django admin actions to mark an order paid or can
 
 The manual admin paid/cancel actions reject eSewa attempts. Staff can use **Check selected eSewa UAT payment statuses** in order admin. eSewa `COMPLETE` confirms the order, `CANCELED`/`NOT_FOUND` cancels it and releases promo use, and pending/ambiguous/unreachable results leave it pending. A completed payment that cannot pass stock or reference checks is flagged `needs_review` for investigation. Do not ask the customer to pay again while the result is uncertain.
 
+## Loyalty rewards
+
+Buy 10 paid items from the same category using the same normalized phone number and receive 1 free item from that category. Quantities from different products and variants in one category combine. Pending, failed, cancelled, refunded, and free reward items do not increase progress.
+
+Payment confirmation updates stock and loyalty in one atomic, idempotent transition for both manual and verified eSewa orders. When an order crosses a 10-item category boundary, Django marks one milestone reward as pending on that paid order. In the order admin, staff choose an in-stock variant from the earned category and save; Django adds it to the order at zero price, deducts stock once, and records one redemption. If one payment earns additional rewards that cannot be attached to the single packing order, they remain available through the checkout reward picker. Checkout shows progress such as **8 of 10 qualifying items** and **1 reward available**, including when the phone field was prefilled before the page loaded.
+
 ## eSewa ePay UAT
 
 Set these in your private `.env`:
@@ -63,6 +69,7 @@ For a quick check:
 ```bash
 .venv/bin/python manage.py check
 .venv/bin/python manage.py test shop
+node --check static/js/site.js
 ```
 
 ## Use a separate Supabase database

@@ -19,6 +19,7 @@ from .models import (
     Product, ProductVariant, PromoBanner, Review, Setting, Tag, Visitor, LoyaltyProgress,
 )
 from .services import InsufficientStock, InvalidPromo, cart_rows, create_order, promo_for, store_settings
+from .phones import normalize_phone
 from .seo import asset_url, json_ld, site_url
 
 
@@ -374,21 +375,31 @@ def promo_validate(request):
 
 
 def loyalty_options(request):
-    phone = request.GET.get("phone", "").strip()
+    phone = normalize_phone(request.GET.get("phone", ""))
     if len(phone) < 5:
-        return JsonResponse({"rewards": []})
+        return JsonResponse({"rewards": [], "progress": []})
     selected_categories = {row["product"].category_id for row in cart_rows(request.session.get("cart", {}))}
     rewards = []
+    progress_rows = []
     for progress in LoyaltyProgress.objects.select_related("category").filter(phone=phone, category_id__in=selected_categories):
-        reserved = Order.objects.filter(phone=phone, reward_category=progress.category, payment_status="pending").exclude(order_status="cancelled").count()
+        reserved = Order.objects.filter(phone=phone, reward_category=progress.category).filter(
+            Q(payment_status="pending") & ~Q(order_status="cancelled")
+            | Q(payment_status="paid", reward_fulfilled=False)
+        ).count()
         available = progress.purchase_count // 10 - progress.free_items_redeemed - reserved
+        progress_rows.append({
+            "category": progress.category.name,
+            "qualifying_items": progress.purchase_count,
+            "towards_next": progress.purchase_count % 10,
+            "available": max(0, available),
+        })
         if available < 1:
             continue
         variants = ProductVariant.objects.select_related("product").filter(
             product__category=progress.category, product__visibility=True, stock__gt=0)[:50]
         rewards.append({"category": progress.category.name, "available": available,
             "variants": [{"id": variant.pk, "label": f"{variant.product.name} — {variant.size}{' / ' + variant.color if variant.color else ''}"} for variant in variants]})
-    return JsonResponse({"rewards": rewards})
+    return JsonResponse({"rewards": rewards, "progress": progress_rows})
 
 def review_by_token(request, token):
     anchor = get_object_or_404(Review.objects.select_related("order"), review_token=token, order__isnull=False)

@@ -1,8 +1,8 @@
 from django.contrib import admin, messages
-from django.db import transaction
-from django.db.models import F
+from django.db.models import Q
 import csv
 from django.http import HttpResponse
+from django.utils.html import format_html
 from .admin_forms import ProductAdminForm, CategoryAdminForm, HeroSlideAdminForm, OrderAdminForm
 from .storage import save_image
 from .models import (
@@ -135,12 +135,44 @@ def check_esewa(modeladmin, request, queryset):
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     form = OrderAdminForm
-    list_display = ("order_number", "customer_name", "phone", "total", "payment_method", "payment_status", "esewa_status", "order_status", "created_at")
+    list_display = ("order_number", "customer_name", "phone", "total", "payment_method", "payment_status", "reward_status", "esewa_status", "order_status", "created_at")
     list_filter = ("payment_method", "payment_status", "order_status", "created_at")
+    list_select_related = ("reward_category",)
     search_fields = ("order_number", "customer_name", "phone")
-    readonly_fields = ("order_number", "subtotal", "discount_amount", "delivery_charge", "total", "payment_status", "payment_method", "esewa_transaction_uuid", "esewa_product_code", "esewa_status", "esewa_ref_id", "reward_fulfilled", "created_at", "updated_at")
+    readonly_fields = ("order_number", "subtotal", "discount_amount", "delivery_charge", "total", "payment_status", "payment_method", "esewa_transaction_uuid", "esewa_product_code", "esewa_status", "esewa_ref_id", "reward_category", "reward_fulfilled", "reward_summary", "created_at", "updated_at")
     inlines = [OrderItemInline]
     actions = [mark_paid, cancel_unpaid, check_esewa, export_orders]
+
+    @admin.display(description="Loyalty reward")
+    def reward_status(self, order):
+        if not order.reward_category_id:
+            return "—"
+        state = "Fulfilled" if order.reward_fulfilled else "Pending"
+        return f"{state}: {order.reward_category}"
+
+    @admin.display(description="Loyalty reward status")
+    def reward_summary(self, order):
+        if not order.reward_category_id:
+            return "No milestone reward attached to this order."
+        if order.reward_fulfilled:
+            return format_html("<strong>Fulfilled:</strong> one free {} item was added and accounted for.", order.reward_category)
+        return format_html(
+            "<strong>Pending fulfilment:</strong> choose one in-stock {} variant below. "
+            "Buy 10 paid items from the same category using the same phone number and receive 1 free item from that category.",
+            order.reward_category,
+        )
+
+    def save_model(self, request, obj, form, change):
+        reward_variant = form.cleaned_data.get("reward_variant")
+        super().save_model(request, obj, form, change)
+        if reward_variant:
+            from .services import fulfill_order_reward, InsufficientStock, InvalidOrderTransition
+            try:
+                fulfill_order_reward(obj.pk, reward_variant.pk)
+            except (InsufficientStock, InvalidOrderTransition) as exc:
+                self.message_user(request, str(exc), level=messages.ERROR)
+            else:
+                self.message_user(request, "The loyalty reward was added as a free item and stock was updated.", level=messages.SUCCESS)
 
 
 @admin.register(PromoCode)
@@ -207,8 +239,26 @@ class SettingAdmin(admin.ModelAdmin):
 
 @admin.register(LoyaltyProgress)
 class LoyaltyProgressAdmin(admin.ModelAdmin):
-    list_display = ("phone", "category", "purchase_count", "free_items_redeemed")
+    list_display = ("phone", "category", "purchase_count", "current_progress", "free_items_redeemed", "available_rewards")
     search_fields = ("phone",)
+    readonly_fields = ("current_progress", "available_rewards", "loyalty_rule")
+
+    @admin.display(description="Progress")
+    def current_progress(self, progress):
+        return f"{progress.progress_to_next_reward} of 10 qualifying items"
+
+    @admin.display(description="Available")
+    def available_rewards(self, progress):
+        reserved = Order.objects.filter(phone=progress.phone, reward_category=progress.category).filter(
+            Q(payment_status="pending") & ~Q(order_status="cancelled")
+            | Q(payment_status="paid", reward_fulfilled=False)
+        ).count()
+        available = max(0, progress.rewards_available - reserved)
+        return f"{available} reward{'s' if available != 1 else ''} available"
+
+    @admin.display(description="How loyalty works")
+    def loyalty_rule(self, progress):
+        return "Buy 10 paid items from the same category using the same phone number and receive 1 free item from that category."
 
 
 @admin.register(Visitor)

@@ -2,7 +2,7 @@ from decimal import Decimal
 from django.test import TestCase
 from django.urls import reverse
 from .models import Category, HomepageSection, LoyaltyProgress, NewsletterSubscriber, Order, OrderItem, Product, ProductVariant, PromoCode, Setting
-from .services import confirm_order_paid
+from .services import InvalidOrderTransition, confirm_order_paid, fulfill_order_reward
 
 
 class PublicCatalogFixtureTests(TestCase):
@@ -401,6 +401,172 @@ class CheckoutFlowTests(TestCase):
             cancel_pending_order(new_order.pk)
         promo.refresh_from_db()
         self.assertEqual(promo.current_uses, 1)
+
+
+class LoyaltyMilestoneTests(TestCase):
+    def setUp(self):
+        self.tops = Category.objects.create(name="Tops", slug="loyalty-tops")
+        self.bottoms = Category.objects.create(name="Bottoms", slug="loyalty-bottoms")
+        self.tee = Product.objects.create(
+            name="Loyalty Tee", slug="loyalty-tee", category=self.tops, price=Decimal("100.00"))
+        self.hoodie = Product.objects.create(
+            name="Loyalty Hoodie", slug="loyalty-hoodie", category=self.tops, price=Decimal("200.00"))
+        self.trousers = Product.objects.create(
+            name="Loyalty Trousers", slug="loyalty-trousers", category=self.bottoms, price=Decimal("300.00"))
+        self.tee_variant = ProductVariant.objects.create(product=self.tee, size="M", stock=100)
+        self.tee_large_variant = ProductVariant.objects.create(product=self.tee, size="L", stock=100)
+        self.hoodie_variant = ProductVariant.objects.create(product=self.hoodie, size="L", stock=100)
+        self.trouser_variant = ProductVariant.objects.create(product=self.trousers, size="M", stock=100)
+
+    def order(self, number, phone, lines, **changes):
+        fields = {
+            "order_number": number, "customer_name": "Loyalty Customer", "phone": phone,
+            "delivery_address": "Address", "subtotal": Decimal("100.00"),
+            "total": Decimal("100.00"), "payment_method": "manual",
+        }
+        fields.update(changes)
+        order = Order.objects.create(**fields)
+        for variant, quantity, is_reward in lines:
+            OrderItem.objects.create(
+                order=order, product=variant.product, product_name=variant.product.name,
+                size=variant.size, color=variant.color or "", price=Decimal("0.00") if is_reward else variant.product.price,
+                quantity=quantity, is_reward_item=is_reward,
+            )
+        return order
+
+    def test_one_manual_paid_order_of_ten_earns_pending_reward_once(self):
+        order = self.order("LOYALTY-10", "+977 980-000-0000", [(self.tee_variant, 10, False)])
+        self.assertFalse(LoyaltyProgress.objects.exists())
+        confirm_order_paid(order.pk)
+        confirm_order_paid(order.pk)
+
+        order.refresh_from_db()
+        progress = LoyaltyProgress.objects.get()
+        self.tee_variant.refresh_from_db()
+        self.assertEqual(order.phone, "9800000000")
+        self.assertEqual((order.payment_status, order.reward_category_id, order.reward_fulfilled),
+                         ("paid", self.tops.pk, False))
+        self.assertEqual((progress.purchase_count, progress.free_items_redeemed), (10, 0))
+        self.assertEqual(self.tee_variant.stock, 90)
+
+    def test_two_paid_orders_combine_products_and_phone_formats_by_category(self):
+        first = self.order("LOYALTY-6", "+977 981-234-5678", [(self.tee_variant, 6, False)])
+        second = self.order("LOYALTY-4", "9812345678", [
+            (self.hoodie_variant, 2, False), (self.tee_large_variant, 2, False)])
+        confirm_order_paid(first.pk)
+        confirm_order_paid(second.pk)
+
+        first.refresh_from_db()
+        second.refresh_from_db()
+        progress = LoyaltyProgress.objects.get(phone="9812345678", category=self.tops)
+        self.assertIsNone(first.reward_category_id)
+        self.assertEqual(second.reward_category_id, self.tops.pk)
+        self.assertEqual(progress.purchase_count, 10)
+        self.assertEqual(LoyaltyProgress.objects.filter(phone="9812345678", category=self.tops).count(), 1)
+
+    def test_additional_reward_from_twenty_items_remains_available_at_checkout(self):
+        order = self.order("LOYALTY-20", "9812345679", [(self.tee_variant, 20, False)])
+        confirm_order_paid(order.pk)
+        session = self.client.session
+        session["cart"] = {self.tee_variant.pk: {"quantity": 1}}
+        session.save()
+
+        payload = self.client.get(reverse("loyalty_options"), {"phone": "9812345679"}).json()
+        self.assertEqual(payload["progress"][0]["qualifying_items"], 20)
+        self.assertEqual(payload["progress"][0]["available"], 1)
+        self.assertEqual(payload["rewards"][0]["available"], 1)
+        order.refresh_from_db()
+        self.assertEqual(order.reward_category_id, self.tops.pk)
+        self.assertFalse(order.reward_fulfilled)
+
+    def test_pending_failed_cancelled_refunded_nine_and_split_categories_do_not_earn(self):
+        nine = self.order("LOYALTY-9", "9800000001", [(self.tee_variant, 9, False)])
+        confirm_order_paid(nine.pk)
+        self.order("LOYALTY-PENDING", "9800000002", [(self.tee_variant, 10, False)])
+        self.order("LOYALTY-FAILED", "9800000003", [(self.tee_variant, 10, False)], payment_status="failed")
+        self.order("LOYALTY-CANCELLED", "9800000004", [(self.tee_variant, 10, False)], order_status="cancelled")
+        self.order("LOYALTY-REFUNDED", "9800000005", [(self.tee_variant, 10, False)], payment_status="refunded")
+        split = self.order("LOYALTY-SPLIT", "9800000006", [
+            (self.tee_variant, 5, False), (self.trouser_variant, 5, False)])
+        confirm_order_paid(split.pk)
+
+        nine.refresh_from_db()
+        split.refresh_from_db()
+        self.assertIsNone(nine.reward_category_id)
+        self.assertEqual(LoyaltyProgress.objects.get(phone="9800000001").purchase_count, 9)
+        self.assertFalse(LoyaltyProgress.objects.filter(phone__in=[
+            "9800000002", "9800000003", "9800000004", "9800000005"]).exists())
+        self.assertIsNone(split.reward_category_id)
+        self.assertEqual(set(LoyaltyProgress.objects.filter(phone="9800000006").values_list("purchase_count", flat=True)), {5})
+
+    def test_staff_fulfils_same_category_reward_at_zero_price_once(self):
+        order = self.order("LOYALTY-FULFIL", "9800000007", [(self.tee_variant, 10, False)])
+        confirm_order_paid(order.pk)
+        with self.assertRaises(InvalidOrderTransition):
+            fulfill_order_reward(order.pk, self.trouser_variant.pk)
+
+        fulfill_order_reward(order.pk, self.hoodie_variant.pk)
+        with self.assertRaises(InvalidOrderTransition):
+            fulfill_order_reward(order.pk, self.hoodie_variant.pk)
+
+        order.refresh_from_db()
+        self.hoodie_variant.refresh_from_db()
+        progress = LoyaltyProgress.objects.get(phone="9800000007", category=self.tops)
+        reward = order.items.get(is_reward_item=True)
+        self.assertTrue(order.reward_fulfilled)
+        self.assertEqual((reward.product, reward.price, reward.quantity), (self.hoodie, Decimal("0.00"), 1))
+        self.assertEqual((progress.purchase_count, progress.free_items_redeemed), (10, 1))
+        self.assertEqual(self.hoodie_variant.stock, 99)
+
+    def test_free_item_does_not_earn_progress_and_lookup_reports_progress(self):
+        LoyaltyProgress.objects.create(phone="9800000008", category=self.tops, purchase_count=10)
+        order = self.order("LOYALTY-REDEEM", "9800000008", [
+            (self.tee_variant, 1, False), (self.hoodie_variant, 1, True)],
+            reward_category=self.tops)
+        confirm_order_paid(order.pk)
+        progress = LoyaltyProgress.objects.get(phone="9800000008", category=self.tops)
+        self.assertEqual((progress.purchase_count, progress.free_items_redeemed), (11, 1))
+        self.assertTrue(Order.objects.get(pk=order.pk).reward_fulfilled)
+
+        session = self.client.session
+        session["cart"] = {self.tee_variant.pk: {"quantity": 1}}
+        session.save()
+        response = self.client.get(reverse("loyalty_options"), {"phone": "+977 980-000-0008"})
+        self.assertEqual(response.json()["progress"], [{
+            "category": "Tops", "qualifying_items": 11, "towards_next": 1, "available": 0,
+        }])
+        self.assertEqual(response.json()["rewards"], [])
+
+    def test_admin_form_only_offers_in_stock_variants_from_pending_category(self):
+        from django.contrib.auth import get_user_model
+        from .admin_forms import OrderAdminForm
+
+        order = self.order("LOYALTY-ADMIN", "9800000009", [(self.tee_variant, 10, False)])
+        confirm_order_paid(order.pk)
+        form = OrderAdminForm(instance=Order.objects.get(pk=order.pk))
+        choices = set(form.fields["reward_variant"].queryset.values_list("pk", flat=True))
+        self.assertEqual(choices, {self.tee_variant.pk, self.tee_large_variant.pk, self.hoodie_variant.pk})
+        self.assertNotIn(self.trouser_variant.pk, choices)
+        admin_user = get_user_model().objects.create_superuser(username="loyalty-admin", password="test-password")
+        self.client.force_login(admin_user)
+        response = self.client.get(reverse("admin:shop_order_change", args=[order.pk]))
+        self.assertContains(response, "Pending fulfilment")
+        self.assertContains(response, "Buy 10 paid items from the same category using the same phone number")
+        item = order.items.get(is_reward_item=False)
+        response = self.client.post(reverse("admin:shop_order_change", args=[order.pk]), {
+            "customer_name": order.customer_name, "phone": order.phone, "email": "",
+            "delivery_address": order.delivery_address, "city": "", "additional_notes": "",
+            "delivery_zone": order.delivery_zone, "payment_screenshot": "",
+            "order_status": order.order_status, "promo_code": "", "review_email_sent_at": "",
+            "reward_variant": self.hoodie_variant.pk,
+            "items-TOTAL_FORMS": "1", "items-INITIAL_FORMS": "1",
+            "items-MIN_NUM_FORMS": "0", "items-MAX_NUM_FORMS": "1000",
+            "items-0-id": item.pk, "items-0-order": order.pk, "_save": "Save",
+        })
+        self.assertEqual(response.status_code, 302, getattr(response, "context", None))
+        order.refresh_from_db()
+        self.assertTrue(order.reward_fulfilled)
+        self.assertTrue(order.items.filter(is_reward_item=True, product=self.hoodie, price=0).exists())
 
 
 class ReviewEmailTests(TestCase):

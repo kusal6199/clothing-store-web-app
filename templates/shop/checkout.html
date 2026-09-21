@@ -23,7 +23,8 @@
       <div class="form-field loyalty-field">
         <label for="id_reward_variant_id">Loyalty reward</label>
         {{ form.reward_variant_id }}
-        <small>Enter your phone number to check available rewards.</small>
+        <small>Buy 10 paid items from the same category using the same phone number and receive 1 free item from that category.</small>
+        <div class="loyalty-progress" data-loyalty-status data-selected-reward="{{ form.reward_variant_id.value|default:'' }}" aria-live="polite">Enter your phone number to check progress and available rewards.</div>
       </div>
       <div class="form-field">
         <label for="id_promo_code">Promo code</label>

@@ -15,26 +15,47 @@ document.addEventListener('DOMContentLoaded', () => {
   const phone = document.querySelector('#id_phone');
   const rewardSelect = document.querySelector('#id_reward_variant_id');
   if (phone && rewardSelect) {
+    const status = document.querySelector('[data-loyalty-status]');
+    const selectedReward = status?.dataset.selectedReward || '';
     let timer;
+    const loadLoyalty = async () => {
+      rewardSelect.innerHTML = '<option value="">No reward selected</option>';
+      if (phone.value.trim().length < 5) {
+        if (status) status.textContent = 'Enter your phone number to check progress and available rewards.';
+        return;
+      }
+      if (status) status.textContent = 'Checking loyalty progress…';
+      try {
+        const response = await fetch('/loyalty/options/?phone=' + encodeURIComponent(phone.value.trim()));
+        if (!response.ok) throw new Error('Loyalty lookup failed');
+        const data = await response.json();
+        for (const reward of data.rewards || []) {
+          for (const variant of reward.variants) {
+            const option = document.createElement('option');
+            option.value = variant.id;
+            option.textContent = `${reward.category}: ${variant.label}`;
+            rewardSelect.appendChild(option);
+          }
+        }
+        if (selectedReward && [...rewardSelect.options].some((option) => option.value === selectedReward)) {
+          rewardSelect.value = selectedReward;
+        }
+        if (status) {
+          const summaries = (data.progress || []).map((entry) => {
+            const rewards = `${entry.available} reward${entry.available === 1 ? '' : 's'} available`;
+            return `${entry.category}: ${entry.towards_next} of 10 qualifying items · ${rewards}`;
+          });
+          status.textContent = summaries.length ? summaries.join(' | ') : 'No paid qualifying items in the categories currently in your bag.';
+        }
+      } catch (_) {
+        if (status) status.textContent = 'Loyalty progress could not be checked. You can still place the order.';
+      }
+    };
     phone.addEventListener('input', () => {
       window.clearTimeout(timer);
-      rewardSelect.innerHTML = '<option value="">No reward selected</option>';
-      if (phone.value.trim().length < 5) return;
-      timer = window.setTimeout(async () => {
-        try {
-          const response = await fetch('/loyalty/options/?phone=' + encodeURIComponent(phone.value.trim()));
-          const data = await response.json();
-          for (const reward of data.rewards || []) {
-            for (const variant of reward.variants) {
-              const option = document.createElement('option');
-              option.value = variant.id;
-              option.textContent = reward.category + ': ' + variant.label;
-              rewardSelect.appendChild(option);
-            }
-          }
-        } catch (_) { /* The order form still works without loyalty lookup. */ }
-      }, 450);
+      timer = window.setTimeout(loadLoyalty, 450);
     });
+    loadLoyalty();
   }
   const mainImage = document.querySelector('#main-product-image');
   document.querySelectorAll('[data-image]').forEach((button) => button.addEventListener('click', () => {

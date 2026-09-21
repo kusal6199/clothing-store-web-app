@@ -118,6 +118,18 @@ class EsewaFlowTests(TestCase):
         self.assertEqual(self.client.session.get("cart"), {})
         self.assertNotIn("checkout_draft", self.client.session)
 
+    def test_verified_esewa_payment_crosses_loyalty_milestone(self):
+        LoyaltyProgress.objects.create(phone="9800000000", category=self.category, purchase_count=9)
+        _, order = self.place()
+        with patch("shop.esewa.urlopen", return_value=self.status(order)):
+            self.client.get(reverse("esewa_success", args=[order.esewa_transaction_uuid]),
+                            {"data": self.signed_data(order)})
+        order.refresh_from_db()
+        progress = LoyaltyProgress.objects.get(phone="9800000000", category=self.category)
+        self.assertEqual(progress.purchase_count, 11)
+        self.assertEqual(order.reward_category_id, self.category.pk)
+        self.assertFalse(order.reward_fulfilled)
+
     def test_pending_attempt_blocks_duplicate_checkout_and_old_result_keeps_new_cart(self):
         _, order = self.place()
         duplicate = self.client.post(reverse("checkout"), {
