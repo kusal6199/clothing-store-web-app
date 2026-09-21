@@ -1,0 +1,43 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Store management{% endblock %} · Clothing Shop</title>
+  <link rel="stylesheet" href="{% static 'css/management.css' %}">
+  <script src="{% static 'js/management.js' %}" defer></script>
+</head>
+<body class="manage-body">
+  <div class="mobile-shade" data-nav-close></div>
+  <aside class="sidebar" data-sidebar>
+    <a class="brand" href="{% url 'management:dashboard' %}"><span class="brand-mark">J</span><span>ClothingShop</span></a>
+    <nav class="side-nav" aria-label="Store management">
+      <a class="{% if section == 'dashboard' %}active{% endif %}" href="{% url 'management:dashboard' %}"><span>▦</span> Dashboard</a>
+      <a class="{% if section == 'products' %}active{% endif %}" href="{% url 'management:products' %}"><span>□</span> Products</a>
+      <a class="{% if section == 'categories' %}active{% endif %}" href="{% url 'management:categories' %}"><span>⌗</span> Categories</a>
+      <a class="{% if section == 'homepage' %}active{% endif %}" href="{% url 'management:homepage' %}"><span>⌂</span> Homepage</a>
+      <a class="{% if section == 'orders' %}active{% endif %}" href="{% url 'management:orders' %}"><span>▤</span> Orders</a>
+      <a class="{% if section == 'loyalty' %}active{% endif %}" href="{% url 'management:loyalty' %}"><span>♡</span> Loyalty</a>
+      <a class="{% if section == 'promo_codes' %}active{% endif %}" href="{% url 'management:promo_codes' %}"><span>％</span> Promo Codes</a>
+      <a class="{% if section == 'messages' %}active{% endif %}" href="{% url 'management:messages' %}"><span>✉</span> Messages</a>
+      <a class="{% if section == 'settings' %}active{% endif %}" href="{% url 'management:settings' %}"><span>⚙</span> Settings</a>
+    </nav>
+    <div class="side-footer">
+      <a href="{% url 'home' %}" target="_blank" rel="noopener"><span>↗</span> View Store</a>
+      <form method="post" action="{% url 'management:logout' %}">{% csrf_token %}<button type="submit"><span>↪</span> Logout</button></form>
+    </div>
+  </aside>
+  <div class="manage-main">
+    <header class="topbar">
+      <button class="mobile-menu" type="button" data-nav-open aria-label="Open navigation">☰</button>
+      <div><strong>{% block heading %}Store management{% endblock %}</strong><span class="topbar-subtitle">Manage your clothing store</span></div>
+      <div class="admin-profile"><span class="avatar">{{ request.user.username|first|upper }}</span><span><strong>{{ request.user.username }}</strong><small>Administrator</small></span></div>
+    </header>
+    <main class="content">
+      {% if messages %}<div class="flash-stack">{% for message in messages %}<div class="flash {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>

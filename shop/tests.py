@@ -126,7 +126,7 @@ class ProductVariantPriceTests(TestCase):
 
 
 class DashboardAnalyticsTests(TestCase):
-    def test_staff_dashboard_counts_daily_orders_and_paid_product_sales(self):
+    def test_superuser_dashboard_counts_daily_orders_and_paid_product_sales(self):
         from datetime import timedelta
         from django.contrib.auth import get_user_model
         from django.utils import timezone
@@ -144,27 +144,27 @@ class DashboardAnalyticsTests(TestCase):
         OrderItem.objects.create(order=paid, product_name="Reward", size="M", price=Decimal("0.00"), quantity=1,
                                  is_reward_item=True)
         self.assertEqual(self.client.get(reverse("dashboard")).status_code, 302)
-        staff = get_user_model().objects.create_user(username="staff", password="test-password", is_staff=True)
-        self.client.force_login(staff)
-        response = self.client.get(reverse("dashboard"))
+        superuser = get_user_model().objects.create_superuser(username="admin", password="test-password")
+        self.client.force_login(superuser)
+        response = self.client.get(reverse("management:dashboard"))
         self.assertEqual(response.status_code, 200)
-        days = response.context["orders_by_day"]
+        days = response.context["chart"]
         self.assertEqual(len(days), 14)
         self.assertEqual(days[-1]["count"], 2)
         self.assertEqual(days[-1]["revenue"], Decimal("500.00"))
         self.assertEqual(days[-2]["count"], 1)
         self.assertEqual(response.context["top_products"][0]["quantity"], 3)
-        self.assertContains(response, "View daily figures")
+        self.assertContains(response, "Sales overview")
 
 
 class StoreSettingsTests(TestCase):
-    def test_only_staff_can_edit_grouped_settings_with_valid_delivery_charges(self):
+    def test_only_superuser_can_edit_grouped_settings_with_valid_delivery_charges(self):
         from django.contrib.auth import get_user_model
 
-        url = reverse("dashboard_settings")
+        url = reverse("management:settings")
         self.assertEqual(self.client.get(url).status_code, 302)
-        staff = get_user_model().objects.create_user(username="settings-staff", password="test-password", is_staff=True)
-        self.client.force_login(staff)
+        superuser = get_user_model().objects.create_superuser(username="settings-admin", password="test-password")
+        self.client.force_login(superuser)
         self.assertContains(self.client.get(url), "Test payment instructions")
         values = {"site_name": "Example Store", "currency": "Rs", "delivery_inside_valley": "-1",
                   "delivery_outside_valley": "250", "email": "store@example.com"}

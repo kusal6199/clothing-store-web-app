@@ -1,0 +1,21 @@
+{% extends 'management/base.html' %}
+{% block title %}Dashboard{% endblock %}{% block heading %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-head"><div><p class="eyebrow">Overview</p><h1>Good day, {{ request.user.username }}</h1><p>Here is what is happening with your store.</p></div><a class="button secondary" href="{% url 'home' %}" target="_blank">View store ↗</a></div>
+<section class="stat-grid">
+  <a class="stat-card" href="{% url 'management:products' %}"><span class="stat-icon">□</span><div><small>Products</small><strong>{{ stats.products }}</strong></div></a>
+  <a class="stat-card" href="{% url 'management:orders' %}"><span class="stat-icon gold">▤</span><div><small>Total orders</small><strong>{{ stats.orders }}</strong>{% if stats.pending %}<em>{{ stats.pending }} pending</em>{% endif %}</div></a>
+  <div class="stat-card"><span class="stat-icon blue">Rs</span><div><small>Paid revenue</small><strong>Rs {{ stats.revenue|floatformat:0 }}</strong></div></div>
+  <div class="stat-card"><span class="stat-icon violet">◎</span><div><small>Customers</small><strong>{{ stats.customers }}</strong></div></div>
+  <a class="stat-card" href="{% url 'management:messages' %}"><span class="stat-icon rose">✉</span><div><small>Unread messages</small><strong>{{ stats.messages }}</strong></div></a>
+  <div class="stat-card"><span class="stat-icon slate">↗</span><div><small>Visitors</small><strong>{{ stats.visitors }}</strong></div></div>
+</section>
+<section class="dashboard-grid">
+  <div class="panel chart-panel"><div class="panel-head"><div><h2>Sales overview</h2><p>Orders over the last 14 days</p></div></div><div class="bar-chart">{% for point in chart %}<div class="bar-column" title="{{ point.day }}: {{ point.count }} orders, Rs {{ point.revenue }}"><span class="bar-value">{{ point.count }}</span><div class="bar" style="height:{{ point.height }}%"></div><small>{{ point.day|date:'j M' }}</small></div>{% endfor %}</div></div>
+  <div class="panel"><div class="panel-head"><div><h2>Top products</h2><p>Paid item quantity</p></div></div><div class="rank-list">{% for item in top_products %}<div><span class="rank">{{ forloop.counter }}</span><span><strong>{{ item.product_name }}</strong><small>{{ item.quantity }} sold</small></span><b>Rs {{ item.revenue|floatformat:0 }}</b></div>{% empty %}<p class="empty">No paid sales yet.</p>{% endfor %}</div></div>
+</section>
+<section class="dashboard-grid lower">
+  <div class="panel"><div class="panel-head"><div><h2>Recent orders</h2><p>Latest store activity</p></div><a href="{% url 'management:orders' %}">View all</a></div><div class="table-wrap"><table><thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Payment</th></tr></thead><tbody>{% for order in recent_orders %}<tr><td><a href="{% url 'management:order_detail' order.pk %}">{{ order.order_number }}</a><small>{{ order.created_at|date:'j M, H:i' }}</small></td><td>{{ order.customer_name }}</td><td>Rs {{ order.total }}</td><td><span class="badge {{ order.payment_status }}">{{ order.get_payment_status_display }}</span></td></tr>{% empty %}<tr><td colspan="4">No orders yet.</td></tr>{% endfor %}</tbody></table></div></div>
+  <div class="panel"><div class="panel-head"><div><h2>Recent messages</h2><p>Customer enquiries</p></div><a href="{% url 'management:messages' %}">View all</a></div><div class="message-preview">{% for item in recent_messages %}<div class="{% if not item.is_read %}unread{% endif %}"><strong>{{ item.name }}</strong><small>{{ item.created_at|timesince }} ago</small><p>{{ item.message|truncatechars:80 }}</p></div>{% empty %}<p class="empty">No messages yet.</p>{% endfor %}</div></div>
+</section>
+{% endblock %}

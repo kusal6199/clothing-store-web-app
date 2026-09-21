@@ -2,21 +2,19 @@ from datetime import timedelta
 from decimal import Decimal
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, Q, Sum
-from django.db.models.functions import TruncDate
+from django.db.models import Q
 from django.http import Http404, HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 from . import esewa
-from .forms import CheckoutForm, ContactForm, NewsletterForm, ReviewForm, STORE_SETTING_GROUPS, StoreSettingsForm
+from .forms import CheckoutForm, ContactForm, NewsletterForm, ReviewForm
 from .models import (
-    Category, Collection, HeroSlide, HomepageSection, Message, NewsletterSubscriber, Order, OrderItem,
-    Product, ProductVariant, PromoBanner, Review, Setting, Tag, Visitor, LoyaltyProgress,
+    Category, Collection, HeroSlide, HomepageSection, Message, NewsletterSubscriber, Order,
+    Product, ProductVariant, PromoBanner, Review, Tag, Visitor, LoyaltyProgress,
 )
 from .services import InsufficientStock, InvalidPromo, cart_rows, create_order, promo_for, store_settings
 from .phones import normalize_phone
@@ -432,53 +430,6 @@ def review_by_token(request, token):
              for review in reviews]
     return render(request, "shop/review.html", {"order": anchor.order, "cards": cards,
         "all_done": bool(reviews) and all(review.used_at for review in reviews)})
-
-
-@staff_member_required
-def dashboard(request):
-    today = timezone.localdate()
-    first_day = today - timedelta(days=13)
-    daily_rows = Order.objects.filter(created_at__date__gte=first_day).annotate(
-        day=TruncDate("created_at")
-    ).values("day").annotate(
-        count=Count("id"), revenue=Sum("total", filter=Q(payment_status="paid"))
-    )
-    by_day = {row["day"]: row for row in daily_rows}
-    orders_by_day = [{"day": first_day + timedelta(days=offset),
-                      "count": by_day.get(first_day + timedelta(days=offset), {}).get("count", 0),
-                      "revenue": by_day.get(first_day + timedelta(days=offset), {}).get("revenue") or Decimal("0.00")}
-                     for offset in range(14)]
-    max_orders = max((row["count"] for row in orders_by_day), default=0)
-    for row in orders_by_day:
-        row["bar_height"] = round(row["count"] * 100 / max_orders) if max_orders else 0
-    top_products = OrderItem.objects.filter(order__payment_status="paid", is_reward_item=False).values(
-        "product_name"
-    ).annotate(quantity=Sum("quantity")).order_by("-quantity", "product_name")[:5]
-    stats = {
-        "products": Product.objects.count(),
-        "orders": Order.objects.count(),
-        "pending_orders": Order.objects.filter(order_status="pending").count(),
-        "paid_revenue": Order.objects.filter(payment_status="paid").aggregate(total=Sum("total"))["total"] or Decimal("0.00"),
-        "messages": Message.objects.filter(is_read=False).count(),
-        "visitors": Visitor.objects.count(),
-        "customers": Order.objects.values("phone").distinct().count(),
-    }
-    return render(request, "shop/dashboard.html", {"stats": stats,
-        "orders_by_day": orders_by_day, "top_products": top_products,
-        "recent_orders": Order.objects.all()[:10], "recent_messages": Message.objects.all()[:5]})
-
-
-@staff_member_required
-def dashboard_settings(request):
-    form = StoreSettingsForm(request.POST if request.method == "POST" else None, initial=store_settings())
-    if request.method == "POST" and form.is_valid():
-        with transaction.atomic():
-            for key, value in form.cleaned_data.items():
-                Setting.objects.update_or_create(key=key, defaults={"value": str(value if value is not None else "")})
-        messages.success(request, "Store settings saved.")
-        return redirect("dashboard_settings")
-    groups = [{"title": title, "fields": [form[key] for key in keys]} for title, keys in STORE_SETTING_GROUPS]
-    return render(request, "shop/dashboard_settings.html", {"form": form, "groups": groups})
 
 
 def robots(request):

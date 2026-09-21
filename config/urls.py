@@ -2,12 +2,13 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
-from shop import views
+from django.views.generic import RedirectView
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
-    path("dashboard/", views.dashboard, name="dashboard"),
-    path("dashboard/settings/", views.dashboard_settings, name="dashboard_settings"),
+    path("admin/", include("shop.management_urls")),
+    path("internal-admin/", admin.site.urls),
+    path("dashboard/", RedirectView.as_view(pattern_name="management:dashboard", permanent=False), name="dashboard"),
+    path("dashboard/settings/", RedirectView.as_view(pattern_name="management:settings", permanent=False), name="dashboard_settings"),
     path("", include("shop.urls")),
 ]
 if settings.DEBUG:

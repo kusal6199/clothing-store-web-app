@@ -1,0 +1,8 @@
+{% extends 'management/base.html' %}{% block title %}{{ title }}{% endblock %}{% block heading %}{{ title }}{% endblock %}
+{% block content %}<div class="page-head"><div><p class="eyebrow">Store management</p><h1>{{ title }}</h1></div><a class="button secondary" href="{{ cancel_url }}">Cancel</a></div>
+<form method="post" enctype="multipart/form-data" class="panel management-form">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="form-grid">{% for field in form %}<div class="field {% if field.field.widget.input_type == 'checkbox' %}check-field{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</div>{% endfor %}</div>
+  {% if formset %}<div class="formset"><div class="panel-head"><div><h2>Product variants</h2><p>Sizes, colors, stock, and price adjustments.</p></div></div>{{ formset.management_form }}{% if formset.non_form_errors %}<div class="form-errors">{{ formset.non_form_errors }}</div>{% endif %}<div class="variant-list">{% for variant in formset %}<div class="variant-row">{% for hidden in variant.hidden_fields %}{{ hidden }}{% endfor %}{% for field in variant.visible_fields %}<div><label>{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}</div>{% endfor %}</div></div>{% endif %}
+  <div class="form-actions"><button class="button primary" type="submit">Save changes</button><a class="button secondary" href="{{ cancel_url }}">Cancel</a></div>
+</form>{% endblock %}

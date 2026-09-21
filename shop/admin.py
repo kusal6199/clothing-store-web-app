@@ -1,4 +1,6 @@
 from django.contrib import admin, messages
+from django.contrib.auth.models import Group, User
+from django.contrib.admin.sites import NotRegistered
 from django.db.models import Q
 import csv
 from django.http import HttpResponse
@@ -14,6 +16,21 @@ from .models import (
 admin.site.site_header = "Clothing Shop Management"
 admin.site.site_title = "Clothing Shop"
 admin.site.index_title = "Store administration"
+
+
+def superuser_has_permission(request):
+    return request.user.is_active and request.user.is_superuser
+
+
+admin.site.has_permission = superuser_has_permission
+
+# The built-in admin is an unlinked emergency fallback at /internal-admin/.
+# Identity and permission management stay outside every web management surface.
+for identity_model in (User, Group):
+    try:
+        admin.site.unregister(identity_model)
+    except NotRegistered:
+        pass
 
 
 class ProductVariantInline(admin.TabularInline):

@@ -5,22 +5,28 @@ A separate Django rebuild of the clothing store in `Jersey-main`. It runs alongs
 ## What works
 
 - Storefront: homepage sections, categories, collections, tags, product search and filters, product details, image gallery, cart, checkout, contact, newsletter signup, reviews, sitemap, and robots.txt.
-- Store management: Django admin for catalog, variants, homepage, reviews, messages, newsletter subscribers, settings, promo codes, orders, and inventory; a custom overview at `/dashboard/` and grouped settings at `/dashboard/settings/`.
+- Store management: one custom responsive interface at `/admin/` for dashboard analytics, catalog and variants, taxonomy, homepage and reviews, orders, loyalty, promo codes, messages, settings, images, and CSV export.
 - Checkout: server-side prices, delivery charges, promo discounts, stock checks, pending orders, optional earned loyalty item, manual/QR payment, and eSewa ePay UAT payment with server-side verification. The paid transition updates stock and loyalty once.
 - Media: local images for development. New admin uploads can go to a public Supabase Storage bucket when configured.
 - Scheduled review email command with SMTP configuration.
 
 Payments are test-only. Manual/QR orders stay pending for staff confirmation. eSewa orders use the UAT test wallet and are marked paid only after a matching server-to-server status check. Live payment endpoints are not configurable in this build.
 
-For test orders, staff can use Django admin actions to mark an order paid or cancel an unpaid order. Cancelling an unpaid order releases its promo use and any pending loyalty reward reservation. Paid or refunded orders cannot be cancelled through that action; refunds still require a separate workflow.
+For test orders, administrators use the order detail page to mark a manual order paid or cancel an unpaid order. Cancelling an unpaid order releases its promo use and any pending loyalty reward reservation. Paid or refunded orders cannot be cancelled through that action; refunds still require a separate workflow.
 
-The manual admin paid/cancel actions reject eSewa attempts. Staff can use **Check selected eSewa UAT payment statuses** in order admin. eSewa `COMPLETE` confirms the order, `CANCELED`/`NOT_FOUND` cancels it and releases promo use, and pending/ambiguous/unreachable results leave it pending. A completed payment that cannot pass stock or reference checks is flagged `needs_review` for investigation. Do not ask the customer to pay again while the result is uncertain.
+The manual paid/cancel actions reject eSewa attempts. Administrators use **Check eSewa status** on an order. eSewa `COMPLETE` confirms the order, `CANCELED`/`NOT_FOUND` cancels it and releases promo use, and pending/ambiguous/unreachable results leave it pending. A completed payment that cannot pass stock or reference checks is flagged `needs_review` for investigation. Do not ask the customer to pay again while the result is uncertain.
+
+## Store management access
+
+Open `http://127.0.0.1:8000/admin/` and sign in with an active Django superuser. Ordinary users and accounts with only `is_staff=True` cannot enter. The interface includes Dashboard, Products, Categories, Homepage, Orders, Loyalty, Promo Codes, Messages, Settings, View Store, and Logout. All state-changing controls submit CSRF-protected POST forms.
+
+The application deliberately has no screens for users, groups, staff accounts, or permissions. Create or maintain the administrator account from the server with `manage.py createsuperuser`. Django's built-in model admin remains at `/internal-admin/` only as an unlinked, superuser-only maintenance fallback; User and Group are unregistered from it. Normal store work should be completed in the custom `/admin/` interface. The old `/dashboard/` URLs redirect to `/admin/`.
 
 ## Loyalty rewards
 
 Buy 10 paid items from the same category using the same normalized phone number and receive 1 free item from that category. Quantities from different products and variants in one category combine. Pending, failed, cancelled, refunded, and free reward items do not increase progress.
 
-Payment confirmation updates stock and loyalty in one atomic, idempotent transition for both manual and verified eSewa orders. When an order crosses a 10-item category boundary, Django marks one milestone reward as pending on that paid order. In the order admin, staff choose an in-stock variant from the earned category and save; Django adds it to the order at zero price, deducts stock once, and records one redemption. If one payment earns additional rewards that cannot be attached to the single packing order, they remain available through the checkout reward picker. Checkout shows progress such as **8 of 10 qualifying items** and **1 reward available**, including when the phone field was prefilled before the page loaded.
+Payment confirmation updates stock and loyalty in one atomic, idempotent transition for both manual and verified eSewa orders. When an order crosses a 10-item category boundary, Django marks one milestone reward as pending on that paid order. On the custom order page, an administrator chooses an in-stock variant from the earned category; Django adds it to the order at zero price, deducts stock once, and records one redemption. If one payment earns additional rewards that cannot be attached to the single packing order, they remain available through the checkout reward picker. Checkout shows progress such as **8 of 10 qualifying items** and **1 reward available**, including when the phone field was prefilled before the page loaded.
 
 ## eSewa ePay UAT
 
@@ -40,7 +46,7 @@ The payment form and status check use eSewa's working UAT host at `https://rc-ep
 
 For a local browser test, restart Django after changing `.env`, add a product to the cart, choose **eSewa UAT** at checkout, and complete a test wallet payment. eSewa returns the browser to the Django success or failure URL. The result page has **Check payment status** and **Check and return to checkout** actions for pending or uncertain responses. If the customer returns to the store and changes the cart, checkout automatically rechecks the previous attempt. A definitive `CANCELED` or `NOT_FOUND` result releases it and permits a fresh order with a new UUID; the validated checkout details and cart remain available for that retry. `PENDING`, `AMBIGUOUS`, timeouts, and mismatches remain locked, while `COMPLETE` settles the original order and clears the saved checkout details. If the browser never returns, staff can run `manage.py check_esewa_payments` after five minutes (or schedule it periodically); this checks up to 100 old pending attempts per run and never treats a browser redirect as proof of payment. The signed amount is calculated from the stored Django order, including discounts and delivery. Automated tests mock the UAT status API; a real test-wallet transaction needs network access and a test login.
 
-The newsletter form stores email addresses in the local database and lets staff manage them in Django admin. It does not send marketing emails. Subscriber data is excluded from the public fixture and Git repository.
+The newsletter form stores email addresses in the local database. It does not send marketing emails. Subscriber data is excluded from the public fixture and Git repository; the internal fallback can be used for rare subscriber maintenance.
 
 ## Run locally
 
@@ -70,6 +76,7 @@ For a quick check:
 .venv/bin/python manage.py check
 .venv/bin/python manage.py test shop
 node --check static/js/site.js
+node --check static/js/management.js
 ```
 
 ## Use a separate Supabase database

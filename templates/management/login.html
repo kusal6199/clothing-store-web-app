@@ -1,0 +1,21 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Admin login · Clothing Shop</title><link rel="stylesheet" href="{% static 'css/management.css' %}"></head>
+<body class="login-page">
+  <main class="login-card">
+    <div class="login-logo">J</div>
+    <p class="eyebrow">ClothingShop</p>
+    <h1>Welcome back</h1>
+    <p class="muted">Sign in to manage your store.</p>
+    <form method="post" class="stack-form">
+      {% csrf_token %}<input type="hidden" name="next" value="{{ next }}">
+      {% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}
+      <label>Username {{ form.username }}{{ form.username.errors }}</label>
+      <label>Password {{ form.password }}{{ form.password.errors }}</label>
+      <button class="button primary wide" type="submit">Sign in</button>
+    </form>
+    <a class="back-link" href="{% url 'home' %}">← Back to store</a>
+  </main>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{% if page_obj.has_other_pages %}
+<nav class="pagination" aria-label="Pagination">
+  {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q|urlencode }}&status={{ request.GET.status|urlencode }}&payment={{ request.GET.payment|urlencode }}&method={{ request.GET.method|urlencode }}&category={{ request.GET.category|urlencode }}">Previous</a>{% endif %}
+  <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q|urlencode }}&status={{ request.GET.status|urlencode }}&payment={{ request.GET.payment|urlencode }}&method={{ request.GET.method|urlencode }}&category={{ request.GET.category|urlencode }}">Next</a>{% endif %}
+</nav>
+{% endif %}

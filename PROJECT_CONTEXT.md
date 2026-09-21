@@ -12,7 +12,7 @@ The original is a Next.js/React/TypeScript storefront and custom admin. Its curr
 
 - Django 5.2, Django templates, CSS, and small browser JavaScript. No Next.js or React runtime in this folder.
 - Django ORM; local SQLite for independent development. `config/settings.py` accepts `DATABASE_URL` for a **separate** Supabase PostgreSQL project later.
-- Django admin for model management, with a custom overview page at `/dashboard/`.
+- A custom Django store-management application at `/admin/`, modelled on the original Next.js dashboard. Django's built-in admin is an unlinked fallback at `/internal-admin/`.
 - Local `media/uploads/` contains copied original public image assets. New admin uploads can use a public Supabase Storage bucket if server-only settings are provided.
 - `.env` contains a new local development secret. It has no original database credentials. Do not print or commit secrets.
 
@@ -20,7 +20,7 @@ The original is a Next.js/React/TypeScript storefront and custom admin. Its curr
 
 - Storefront: homepage with dynamic sections and slides, catalog/search/filters, product details and gallery, session cart, checkout, contact form, review form, sitemap, and robots.txt.
 - Store logic: server-side prices, delivery charges, promo code discounts, variant stock checks, optional loyalty reward, pending order creation, and idempotent admin action to confirm paid orders, deduct stock, and update loyalty progress.
-- Admin: products/variants, categories, collections, tags, homepage content, messages, reviews, settings, orders, promo codes, plus CSV order export.
+- Store management: custom responsive pages for products/variants, categories, collections, tags, homepage content, messages, reviews, settings, orders, loyalty, promo codes, and CSV order export. Only active superusers can enter it.
 - Scheduled `send_review_requests` management command; SMTP can be configured later.
 - Public catalog/homepage data was copied read-only from the original Supabase database into local `db.sqlite3`: 4 products, 9 categories, 4 hero slides, and associated public content. Operational data, customer orders/messages, and original admin credentials were not copied. The import script is `scripts/import_public_catalog.py`.
 - `README.md` has setup, database, and Storage instructions. The project has its own `.venv` and dependencies installed.
@@ -51,6 +51,7 @@ The original is a Next.js/React/TypeScript storefront and custom admin. Its curr
 - A customer who cancels at eSewa can now safely resume checkout. When the cart changed after an unfinished attempt, checkout rechecks its UUID and releases it only for `CANCELED`/`NOT_FOUND`; the result page also offers a status-backed return-to-checkout action. Active, ambiguous, mismatched, or unreachable attempts remain locked, and a completed attempt settles the original order. The reported stuck UUID was verified `NOT_FOUND` before its order was marked failed/cancelled. All 42 tests pass.
 - Validated checkout contact, delivery, promo, loyalty, and payment selections are retained in the server-side session during an eSewa attempt. Cancellation keeps them for a retry; successful eSewa and manual orders clear the draft. All 43 tests pass.
 - Loyalty parity now follows the original milestone and packing flow. Phone numbers are normalized by migration `0006`; paid, non-reward quantities aggregate by category across products and variants. The atomic, idempotent manual/eSewa paid transition detects a crossed 10-item boundary and reserves one reward on that order. Staff can choose an in-stock same-category variant in order admin; fulfilment creates one zero-price reward item, deducts stock, and increments redemption once. Other earned rewards remain available through checkout, which now displays progress and runs lookup for prefilled phones. A privacy-safe local audit found stored progress matched paid quantities but no paid order had received the missing milestone assignment, confirming the gap. `manage.py check`, migration checks, JavaScript syntax checking, and all 51 tests pass.
+- The fragmented `/dashboard/` plus default Django admin experience has been replaced by one responsive custom interface at `/admin/`, following the original sidebar, mobile drawer, top bar, summary cards, chart, top products, recent activity, and management screen structure. Products and variants, taxonomy, homepage content/reviews, orders and protected payment actions, loyalty fulfilment, promo codes, messages, image uploads, settings, and CSV export are handled by custom Django views. Anonymous users go to the custom login; ordinary staff receive 403; only active superusers have access. `/dashboard/` redirects to `/admin/`. The built-in admin remains as an unlinked, superuser-only emergency fallback at `/internal-admin/`, with User and Group unregistered. No identity, staff, group, or permission-management route is exposed by the store UI. Django checks, migration checks, both JavaScript syntax checks, and all 60 tests pass. Browser providers were unavailable, so automated route/template and responsive-markup checks were used; interactive visual QA remains pending.
 - Django test client rendered the homepage, catalog, product, cart, checkout, contact, sitemap, admin login, and loyalty lookup successfully.
 - Browser visual QA could not be performed because no browser surface was available in that session. The visual design still needs comparison against the original site.
 - The original `Jersey-main` Git working tree was clean after creating this separate project.
@@ -59,7 +60,7 @@ The source-derived feature checklist and current status live in `REQUIREMENTS.md
 
 ## Next work
 
-1. Run the two sites side by side and compare every public page and admin workflow for functionality and appearance. Improve the Django templates/CSS where needed.
+1. Run the two sites side by side and compare every public page for functionality and appearance. The management interface structure now follows the original; continue client-led visual refinement where needed.
 2. Create a Django superuser on each new environment with `.venv/bin/python manage.py createsuperuser` when admin access is needed; no default credentials are shipped.
 3. Keep payments in test scope. Run a real eSewa UAT wallet transaction and browser QA when test access is available; do not enable live eSewa.
 4. When the user provides a **new** Supabase project, configure its database and Storage separately, migrate the Django schema there, and import public data with `scripts/import_public_catalog.py`. Do not run Django migrations on the original Prisma database.
