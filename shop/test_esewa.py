@@ -133,6 +133,42 @@ class EsewaFlowTests(TestCase):
         self.client.get(reverse("esewa_result", args=[order.esewa_transaction_uuid]))
         self.assertEqual(self.client.session["cart"][self.variant.pk]["quantity"], 3)
 
+    def test_changed_cart_rechecks_and_releases_expired_attempt_before_checkout(self):
+        _, order = self.place()
+        session = self.client.session
+        session["cart"][self.variant.pk]["quantity"] = 3
+        session.save()
+        with patch("shop.esewa.urlopen", return_value=self.status(order, status="NOT_FOUND")):
+            response = self.client.get(reverse("checkout"))
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.payment_status, "failed")
+        self.assertEqual(order.order_status, "cancelled")
+        self.assertEqual(order.esewa_status, "not_found")
+        self.assertNotIn("pending_esewa_transaction_uuid", self.client.session)
+        self.assertEqual(self.client.session["cart"][self.variant.pk]["quantity"], 3)
+
+    def test_result_can_safely_recheck_and_return_to_checkout(self):
+        _, order = self.place()
+        result_url = reverse("esewa_result", args=[order.esewa_transaction_uuid])
+        self.assertContains(self.client.get(result_url), "Check and return to checkout")
+        with patch("shop.esewa.urlopen", return_value=self.status(order, status="NOT_FOUND")):
+            response = self.client.post(reverse("esewa_return_to_checkout", args=[order.esewa_transaction_uuid]))
+        self.assertRedirects(response, reverse("checkout"))
+        order.refresh_from_db()
+        self.assertEqual((order.payment_status, order.order_status), ("failed", "cancelled"))
+        self.assertNotIn("pending_esewa_transaction_uuid", self.client.session)
+
+    def test_return_to_checkout_keeps_active_pending_attempt_locked(self):
+        _, order = self.place()
+        with patch("shop.esewa.urlopen", return_value=self.status(order, status="PENDING")):
+            response = self.client.post(reverse("esewa_return_to_checkout", args=[order.esewa_transaction_uuid]))
+        self.assertRedirects(response, reverse("esewa_result", args=[order.esewa_transaction_uuid]))
+        order.refresh_from_db()
+        self.assertEqual((order.payment_status, order.order_status, order.esewa_status),
+                         ("pending", "pending", "pending"))
+        self.assertEqual(self.client.session["pending_esewa_transaction_uuid"], order.esewa_transaction_uuid)
+
     def test_tampered_or_mismatched_signed_returns_never_settle(self):
         _, order = self.place()
         url = reverse("esewa_success", args=[order.esewa_transaction_uuid])
@@ -221,6 +257,8 @@ class EsewaFlowTests(TestCase):
         self.assertEqual(order.payment_status, "failed")
         self.assertEqual(promo.current_uses, 0)
         self.assertEqual(self.variant.stock, 5)
+        self.assertContains(self.client.get(reverse("esewa_result", args=[order.esewa_transaction_uuid])),
+                            'href="/checkout/">Return to checkout</a>')
         next_order = self.client.post(reverse("checkout"), {
             "customer_name": "Buyer", "phone": "9800000000", "delivery_address": "Test",
             "delivery_zone": "inside", "payment_method": "manual", "promo_code": "SAVE10"})

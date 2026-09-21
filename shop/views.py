@@ -189,7 +189,18 @@ def checkout(request):
     pending_uuid = request.session.get("pending_esewa_transaction_uuid")
     if pending_uuid:
         previous = Order.objects.filter(esewa_transaction_uuid=pending_uuid, payment_method="esewa").first()
-        if previous and previous.order_status != "cancelled":
+        pending_cart = request.session.get("pending_esewa_cart", {})
+        current_cart = request.session.get("cart", {})
+        if (previous and previous.order_status != "cancelled"
+                and previous.payment_status != "paid" and current_cart != pending_cart):
+            try:
+                esewa.reconcile(previous)
+            except esewa.EsewaVerificationError:
+                esewa.set_state(previous.pk, "uncertain")
+            previous.refresh_from_db()
+        if previous and previous.order_status != "cancelled" and previous.payment_status != "paid":
+            return redirect("esewa_result", transaction_uuid=pending_uuid)
+        if previous and previous.payment_status == "paid":
             return redirect("esewa_result", transaction_uuid=pending_uuid)
         request.session.pop("pending_esewa_transaction_uuid", None)
         request.session.pop("pending_esewa_cart", None)
@@ -273,6 +284,28 @@ def esewa_check(request, transaction_uuid):
         esewa.reconcile(order)
     except esewa.EsewaVerificationError:
         esewa.set_state(order.pk, "uncertain")
+    return redirect("esewa_result", transaction_uuid=transaction_uuid)
+
+
+@require_POST
+def esewa_return_to_checkout(request, transaction_uuid):
+    if request.session.get("pending_esewa_transaction_uuid") != transaction_uuid:
+        raise Http404
+    order = get_object_or_404(Order, esewa_transaction_uuid=transaction_uuid, payment_method="esewa")
+    try:
+        result = esewa.reconcile(order)
+    except esewa.EsewaVerificationError:
+        result = "uncertain"
+        esewa.set_state(order.pk, result)
+    order.refresh_from_db()
+    if result == "cancelled" or order.order_status == "cancelled":
+        request.session.pop("pending_esewa_transaction_uuid", None)
+        request.session.pop("pending_esewa_cart", None)
+        messages.info(request, "The unfinished eSewa attempt was cancelled. You can update and place your order again.")
+        return redirect("checkout")
+    if result == "paid" or order.payment_status == "paid":
+        return redirect("esewa_result", transaction_uuid=transaction_uuid)
+    messages.info(request, "eSewa still reports this payment as pending or uncertain. Please check again shortly.")
     return redirect("esewa_result", transaction_uuid=transaction_uuid)
 
 

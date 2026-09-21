@@ -13,6 +13,7 @@ urlpatterns = [
     path("checkout/esewa/failure/<str:transaction_uuid>/", views.esewa_return, {"outcome": "failure"}, name="esewa_failure"),
     path("checkout/esewa/result/<str:transaction_uuid>/", views.esewa_result, name="esewa_result"),
     path("checkout/esewa/check/<str:transaction_uuid>/", views.esewa_check, name="esewa_check"),
+    path("checkout/esewa/return/<str:transaction_uuid>/", views.esewa_return_to_checkout, name="esewa_return_to_checkout"),
     path("checkout/success/<str:order_number>/", views.order_success, name="order_success"),
     path("contact/", views.contact, name="contact"),
     path("newsletter/subscribe/", views.newsletter_subscribe, name="newsletter_subscribe"),

@@ -9,11 +9,15 @@
     <p>Your test payment was verified with eSewa. Your order is confirmed.</p>
   {% elif order.order_status == 'cancelled' %}
     <p>eSewa reported this test payment as cancelled or expired. Your order was cancelled; you can place a new one.</p>
+    <a class="button" href="{% url 'checkout' %}">Return to checkout</a>
   {% elif order.esewa_status == 'needs_review' %}
     <p>eSewa reported a payment, but the shop could not safely confirm this order. Please contact the shop with your order number. Do not pay again.</p>
   {% else %}
     <p>The payment is still pending or could not be verified. Do not pay again until its status is clear.</p>
     <form method="post" action="{% url 'esewa_check' order.esewa_transaction_uuid %}">{% csrf_token %}<button class="button" type="submit">Check payment status</button></form>
+    {% if request.session.pending_esewa_transaction_uuid == order.esewa_transaction_uuid %}
+      <form method="post" action="{% url 'esewa_return_to_checkout' order.esewa_transaction_uuid %}">{% csrf_token %}<button class="button" type="submit">Check and return to checkout</button></form>
+    {% endif %}
   {% endif %}
   <a class="button" href="{% url 'catalog' %}">Continue shopping</a>
 </div>
